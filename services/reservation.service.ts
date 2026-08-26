@@ -460,10 +460,14 @@ export class ReservationService {
       query.siteId = new mongoose.Types.ObjectId(options.siteId);
     }
 
-    if (options.startDate && options.endDate) {
-      const s = new Date(options.startDate + "T00:00:00Z");
-      const e = new Date(options.endDate + "T23:59:59Z");
-      query.checkInDate = { $gte: s, $lte: e };
+    if (options.startDate || options.endDate) {
+      query.checkInDate = {};
+      if (options.startDate) {
+        query.checkInDate.$gte = new Date(options.startDate + "T00:00:00Z");
+      }
+      if (options.endDate) {
+        query.checkInDate.$lte = new Date(options.endDate + "T23:59:59Z");
+      }
     }
 
     if (options.search && options.search.trim()) {

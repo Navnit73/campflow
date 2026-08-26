@@ -71,7 +71,7 @@ export function NewReservationModal({
 
   useEffect(() => {
     if (initialSiteId) setSiteId(initialSiteId);
-    if (initialDate) {
+    if (initialDate && !isNaN(new Date(initialDate + "T00:00:00Z").getTime())) {
       setCheckInDate(initialDate);
       const dOut = new Date(new Date(initialDate + "T00:00:00Z").getTime() + 2 * 24 * 60 * 60 * 1000);
       setCheckOutDate(dOut.toISOString().split("T")[0]);

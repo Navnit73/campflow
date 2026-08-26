@@ -55,9 +55,13 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
     loadData(startDateStr, daysCount);
   }, [startDateStr, daysCount]);
 
-  // Generate date array
+  // Generate date array safely
+  const validStart = startDateStr && !isNaN(new Date(startDateStr + "T00:00:00Z").getTime())
+    ? startDateStr
+    : new Date().toISOString().split("T")[0];
+
   const dateColumns = Array.from({ length: daysCount }).map((_, i) => {
-    const d = new Date(startDateStr + "T00:00:00Z");
+    const d = new Date(validStart + "T00:00:00Z");
     d.setUTCDate(d.getUTCDate() + i);
     const dateKey = d.toISOString().split("T")[0];
     const dayName = d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
@@ -69,13 +73,13 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
   });
 
   const handlePrev = () => {
-    const d = new Date(startDateStr + "T00:00:00Z");
+    const d = new Date(validStart + "T00:00:00Z");
     d.setUTCDate(d.getUTCDate() - 7);
     setStartDateStr(d.toISOString().split("T")[0]);
   };
 
   const handleNext = () => {
-    const d = new Date(startDateStr + "T00:00:00Z");
+    const d = new Date(validStart + "T00:00:00Z");
     d.setUTCDate(d.getUTCDate() + 7);
     setStartDateStr(d.toISOString().split("T")[0]);
   };
