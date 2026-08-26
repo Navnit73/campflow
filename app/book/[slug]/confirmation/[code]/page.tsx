@@ -161,6 +161,27 @@ export default function ConfirmationPage() {
             />
           </div>
 
+          {/* Add-On Services & Extras if any */}
+          {reservation.addOns && reservation.addOns.length > 0 && (
+            <div className="border-t border-slate-100 pt-3 space-y-2">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Included Add-On Services & Extras:
+              </span>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
+                {reservation.addOns.map((item: any, idx: number) => (
+                  <div key={idx} className="flex justify-between items-center text-slate-700">
+                    <span className="font-semibold">
+                      {item.name} <span className="font-mono text-slate-500">(x{item.quantity})</span>
+                    </span>
+                    <span className="font-mono font-bold text-emerald-800">
+                      {formatCurrency(item.subtotal)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Guest & Payment Summary */}
           <div className="border-t border-slate-100 pt-3 space-y-1.5 text-xs text-slate-700">
             <div className="flex justify-between">

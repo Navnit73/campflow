@@ -5,8 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import apiClient from "@/lib/axios/client";
 import { HookupIcons } from "@/components/ui/HookupIcons";
 import { RV_TYPES } from "@/lib/constants";
-import { formatCurrency, formatDate, formatRvType, formatRigType } from "@/lib/utils/format";
-import { parseDateOnly, formatDateKey, addDaysStr, diffDays } from "@/lib/utils/date";
+import { formatCurrency, formatDate, formatRvType } from "@/lib/utils/format";
+import { formatDateKey, addDaysStr } from "@/lib/utils/date";
+import { calculatePricing } from "@/lib/utils/pricing";
 import {
   Trees,
   Search,
@@ -21,7 +22,30 @@ import {
   Mail,
   Inbox,
   AlertCircle,
+  Sparkles,
+  Plus,
+  Minus,
+  Flame,
+  Zap,
+  Wifi,
+  Package,
+  Clock,
+  Coffee,
+  Shield,
 } from "lucide-react";
+
+const ICON_MAP: Record<string, any> = {
+  sparkles: Sparkles,
+  flame: Flame,
+  truck: Truck,
+  zap: Zap,
+  wifi: Wifi,
+  package: Package,
+  clock: Clock,
+  coffee: Coffee,
+  shield: Shield,
+  map: MapPin,
+};
 
 export default function PublicBookingPage() {
   const params = useParams();
@@ -47,7 +71,9 @@ export default function PublicBookingPage() {
   // Results & Selection
   const [property, setProperty] = useState<any | null>(null);
   const [availableSites, setAvailableSites] = useState<any[]>([]);
+  const [availableAddOns, setAvailableAddOns] = useState<any[]>([]);
   const [selectedSite, setSelectedSite] = useState<any | null>(null);
+  const [selectedAddOns, setSelectedAddOns] = useState<Record<string, number>>({});
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -95,6 +121,7 @@ export default function PublicBookingPage() {
       if (res.data?.success) {
         setProperty(res.data.data.property);
         setAvailableSites(res.data.data.availableSites || []);
+        setAvailableAddOns(res.data.data.availableAddOns || []);
         setStep(2);
       }
     } catch (err: any) {
@@ -119,6 +146,7 @@ export default function PublicBookingPage() {
         if (res.data?.success) {
           setProperty(res.data.data.property);
           setAvailableSites(res.data.data.availableSites || []);
+          setAvailableAddOns(res.data.data.availableAddOns || []);
         }
       })
       .catch(() => {});
@@ -129,6 +157,55 @@ export default function PublicBookingPage() {
     setStep(3);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const handleToggleAddOn = (addonId: string) => {
+    setSelectedAddOns((prev) => {
+      const cur = prev[addonId] || 0;
+      if (cur > 0) {
+        const next = { ...prev };
+        delete next[addonId];
+        return next;
+      }
+      return { ...prev, [addonId]: 1 };
+    });
+  };
+
+  const handleUpdateAddOnQty = (addonId: string, delta: number) => {
+    setSelectedAddOns((prev) => {
+      const cur = prev[addonId] || 0;
+      const nextVal = Math.max(0, cur + delta);
+      if (nextVal === 0) {
+        const next = { ...prev };
+        delete next[addonId];
+        return next;
+      }
+      return { ...prev, [addonId]: nextVal };
+    });
+  };
+
+  // Build applied add-ons
+  const appliedAddOns = availableAddOns
+    .filter((a) => (selectedAddOns[a._id] || 0) > 0)
+    .map((a) => ({
+      addOnId: a._id,
+      name: a.name,
+      price: a.price,
+      pricingType: a.pricingType,
+      quantity: selectedAddOns[a._id],
+      taxable: a.taxable,
+    }));
+
+  // Dynamic calculated pricing with Add-Ons
+  const dynamicPricing = selectedSite
+    ? calculatePricing({
+        nightlyRate: selectedSite.currentBaseRate,
+        checkInDate,
+        checkOutDate,
+        adults: Number(adults || 2),
+        taxRatePercent: property?.taxRatePercent || 7.5,
+        addOns: appliedAddOns,
+      })
+    : null;
 
   const handleCompleteBooking = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,6 +222,7 @@ export default function PublicBookingPage() {
         adults: Number(adults || 2),
         children: Number(children || 0),
         pets: Number(pets || 0),
+        addOns: appliedAddOns,
         discountCode: discountCode || undefined,
         guest: {
           firstName,
@@ -165,11 +243,16 @@ export default function PublicBookingPage() {
         router.push(`/book/${slug}/confirmation/${code}`);
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Booking submission failed. Please try again.";
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Booking submission failed. Please try again.";
       setErrorMsg(msg);
-      // If site was taken, allow switching back to step 2
-      if (err?.response?.status === 409 || msg.includes("booked") || msg.includes("available")) {
-        // Refresh availability
+      if (
+        err?.response?.status === 409 ||
+        msg.includes("booked") ||
+        msg.includes("available")
+      ) {
         handleSearch();
       }
     } finally {
@@ -222,7 +305,7 @@ export default function PublicBookingPage() {
             onClick={() => setStep(1)}
             className={`px-3 py-1.5 rounded-md transition-all ${
               step === 1
-                ? "bg-emerald-600 text-white"
+                ? "bg-emerald-600 text-white shadow-xs"
                 : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
             }`}
           >
@@ -234,7 +317,7 @@ export default function PublicBookingPage() {
             disabled={!property}
             className={`px-3 py-1.5 rounded-md transition-all ${
               step === 2
-                ? "bg-emerald-600 text-white"
+                ? "bg-emerald-600 text-white shadow-xs"
                 : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 disabled:opacity-50"
             }`}
           >
@@ -245,11 +328,11 @@ export default function PublicBookingPage() {
             disabled={!selectedSite}
             className={`px-3 py-1.5 rounded-md transition-all ${
               step === 3
-                ? "bg-emerald-600 text-white"
+                ? "bg-emerald-600 text-white shadow-xs"
                 : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 disabled:opacity-50"
             }`}
           >
-            3. Guest Info & Pay
+            3. Extras & Checkout
           </button>
         </div>
 
@@ -484,7 +567,7 @@ export default function PublicBookingPage() {
 
                       <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between">
                         <div className="text-xs">
-                          <span className="text-slate-500">Total with tax: </span>
+                          <span className="text-slate-500">Base lodging: </span>
                           <span className="font-black text-slate-900 font-mono">
                             {formatCurrency(site.calculatedPricing?.totalAmount)}
                           </span>
@@ -505,141 +588,250 @@ export default function PublicBookingPage() {
           </div>
         )}
 
-        {/* STEP 3: Guest Details & Instant Checkout */}
+        {/* STEP 3: Add-Ons, Guest Details & Instant Checkout */}
         {step === 3 && selectedSite && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Form */}
-            <div className="lg:col-span-2 surface-card p-5 rounded-lg space-y-4 border border-slate-200">
-              <div className="border-b border-slate-100 pb-2.5">
-                <h2 className="text-lg font-black tracking-tight text-slate-900">
-                  Camper Contact Information
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Your reservation confirmation will be sent directly to this email
-                </p>
-              </div>
-
-              <form onSubmit={handleCompleteBooking} className="space-y-3.5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="label text-xs font-bold text-slate-700 py-0.5">First Name</label>
-                    <input
-                      type="text"
-                      placeholder="Marcus"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="input input-bordered input-sm w-full font-medium rounded-md"
-                      required
-                    />
+            {/* Main Form Column */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Optional Add-on Services Section */}
+              {availableAddOns.length > 0 && (
+                <div className="surface-card p-4 sm:p-5 rounded-lg space-y-3.5 border border-slate-200">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                        Enhance Your Stay with Add-On Services
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Select firewood, rentals, early/late check-in, or VIP amenities
+                      </p>
+                    </div>
+                    {appliedAddOns.length > 0 && (
+                      <span className="badge badge-success badge-sm font-mono font-bold text-white text-[11px]">
+                        +{formatCurrency(dynamicPricing?.addOnsSubtotal || 0)} Added
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <label className="label text-xs font-bold text-slate-700 py-0.5">Last Name</label>
-                    <input
-                      type="text"
-                      placeholder="Holloway"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="input input-bordered input-sm w-full font-medium rounded-md"
-                      required
-                    />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {availableAddOns.map((addon) => {
+                      const IconComp = ICON_MAP[addon.icon] || Sparkles;
+                      const qty = selectedAddOns[addon._id] || 0;
+                      const isSelected = qty > 0;
+
+                      return (
+                        <div
+                          key={addon._id}
+                          className={`p-3 rounded-lg border transition-all flex flex-col justify-between space-y-2 ${
+                            isSelected
+                              ? "bg-emerald-50/50 border-emerald-400 shadow-2xs"
+                              : "bg-white border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+                              <IconComp className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-bold text-xs text-slate-900 leading-snug truncate">
+                                {addon.name}
+                              </h4>
+                              {addon.description && (
+                                <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                                  {addon.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                            <div className="text-xs font-mono font-bold text-emerald-800">
+                              {formatCurrency(addon.price)}{" "}
+                              <span className="text-[10px] text-slate-400 font-normal">
+                                {addon.pricingType === "per_night"
+                                  ? "/ night"
+                                  : addon.pricingType === "per_person"
+                                  ? "/ person"
+                                  : addon.pricingType === "per_unit"
+                                  ? "/ item"
+                                  : "flat"}
+                              </span>
+                            </div>
+
+                            {/* Stepper */}
+                            <div>
+                              {isSelected ? (
+                                <div className="flex items-center gap-1 bg-white rounded-md border border-emerald-300 p-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateAddOnQty(addon._id, -1)}
+                                    className="btn btn-ghost btn-xs btn-circle h-5 w-5 text-slate-600 hover:text-slate-900"
+                                  >
+                                    <Minus className="w-3 h-3" />
+                                  </button>
+                                  <span className="w-4 text-center font-mono font-bold text-xs text-emerald-800">
+                                    {qty}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateAddOnQty(addon._id, 1)}
+                                    className="btn btn-ghost btn-xs btn-circle h-5 w-5 text-slate-600 hover:text-slate-900"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleAddOn(addon._id)}
+                                  className="btn btn-outline btn-xs font-bold text-[11px] text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded"
+                                >
+                                  + Add
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
+              )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="label text-xs font-bold text-slate-700 py-0.5">Email Address</label>
-                    <input
-                      type="email"
-                      placeholder="marcus@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="input input-bordered input-sm w-full rounded-md"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label text-xs font-bold text-slate-700 py-0.5">Mobile Phone</label>
-                    <input
-                      type="tel"
-                      placeholder="(555) 000-0000"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="input input-bordered input-sm w-full font-mono rounded-md"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="label text-xs font-bold text-slate-700 py-0.5">License Plate (optional)</label>
-                  <input
-                    type="text"
-                    placeholder="CO-849X"
-                    value={licensePlate}
-                    onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
-                    className="input input-bordered input-sm w-full uppercase font-mono rounded-md"
-                  />
-                </div>
-
-                <div>
-                  <label className="label text-xs font-bold text-slate-700 py-0.5">Discount Promo Code</label>
-                  <input
-                    type="text"
-                    placeholder="GOODSAM, MILITARY"
-                    value={discountCode}
-                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                    className="input input-bordered input-sm w-full uppercase font-mono rounded-md"
-                  />
-                </div>
-
-                <div>
-                  <label className="label text-xs font-bold text-slate-700 py-0.5">Special Requests or Arrival Notes</label>
-                  <textarea
-                    placeholder="Traveling with pets, arriving after 6 PM, etc..."
-                    value={specialRequests}
-                    onChange={(e) => setSpecialRequests(e.target.value)}
-                    className="textarea textarea-bordered textarea-sm w-full rounded-md"
-                    rows={2}
-                  />
-                </div>
-
-                {/* Instant Mock Payment Gateway */}
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider text-slate-800">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    Instant Secure Checkout (Demo Mode)
-                  </div>
-                  <p className="text-xs text-slate-600">
-                    Payment is automatically authorized and confirmed upon submission.
+              {/* Guest Form */}
+              <div className="surface-card p-5 rounded-lg space-y-4 border border-slate-200">
+                <div className="border-b border-slate-100 pb-2.5">
+                  <h2 className="text-base font-black tracking-tight text-slate-900">
+                    Camper Contact Information
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Your reservation confirmation will be sent directly to this email
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="btn btn-ghost btn-xs sm:btn-sm font-semibold text-xs rounded-md"
-                  >
-                    ← Back to Sites
-                  </button>
+                <form onSubmit={handleCompleteBooking} className="space-y-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="label text-xs font-bold text-slate-700 py-0.5">First Name</label>
+                      <input
+                        type="text"
+                        placeholder="Marcus"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        className="input input-bordered input-sm w-full font-medium rounded-md"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="label text-xs font-bold text-slate-700 py-0.5">Last Name</label>
+                      <input
+                        type="text"
+                        placeholder="Holloway"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        className="input input-bordered input-sm w-full font-medium rounded-md"
+                        required
+                      />
+                    </div>
+                  </div>
 
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="btn btn-primary btn-sm gap-1.5 font-bold px-6 text-xs rounded-md"
-                  >
-                    {submitting ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-4 h-4" />
-                    )}
-                    Confirm & Book Now
-                  </button>
-                </div>
-              </form>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="label text-xs font-bold text-slate-700 py-0.5">Email Address</label>
+                      <input
+                        type="email"
+                        placeholder="marcus@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="input input-bordered input-sm w-full rounded-md"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="label text-xs font-bold text-slate-700 py-0.5">Mobile Phone</label>
+                      <input
+                        type="tel"
+                        placeholder="(555) 000-0000"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="input input-bordered input-sm w-full font-mono rounded-md"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="label text-xs font-bold text-slate-700 py-0.5">License Plate (optional)</label>
+                      <input
+                        type="text"
+                        placeholder="CO-849X"
+                        value={licensePlate}
+                        onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
+                        className="input input-bordered input-sm w-full uppercase font-mono rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="label text-xs font-bold text-slate-700 py-0.5">Discount Promo Code</label>
+                      <input
+                        type="text"
+                        placeholder="GOODSAM, MILITARY"
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                        className="input input-bordered input-sm w-full uppercase font-mono rounded-md"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="label text-xs font-bold text-slate-700 py-0.5">Special Requests or Arrival Notes</label>
+                    <textarea
+                      placeholder="Traveling with pets, arriving after 6 PM, etc..."
+                      value={specialRequests}
+                      onChange={(e) => setSpecialRequests(e.target.value)}
+                      className="textarea textarea-bordered textarea-sm w-full rounded-md"
+                      rows={2}
+                    />
+                  </div>
+
+                  {/* Instant Mock Payment Gateway */}
+                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider text-slate-800">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      Instant Secure Checkout (Demo Mode)
+                    </div>
+                    <p className="text-xs text-slate-600">
+                      Payment is automatically authorized and confirmed upon submission.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      className="btn btn-ghost btn-xs sm:btn-sm font-semibold text-xs rounded-md"
+                    >
+                      ← Back to Sites
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="btn btn-primary btn-sm gap-1.5 font-bold px-6 text-xs rounded-md"
+                    >
+                      {submitting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4" />
+                      )}
+                      Confirm & Book Now ({formatCurrency(dynamicPricing?.totalAmount || 0)})
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
 
-            {/* Summary Card */}
+            {/* Summary Sticky Card */}
             <div className="surface-card p-4 rounded-lg space-y-3 h-fit sticky top-20 border border-slate-200">
               <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2">
                 Booking Summary
@@ -664,7 +856,7 @@ export default function PublicBookingPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">Nights:</span>
-                  <span className="font-mono">{selectedSite.calculatedPricing?.numNights} nights</span>
+                  <span className="font-mono">{dynamicPricing?.numNights || 1} nights</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">Guests:</span>
@@ -672,23 +864,46 @@ export default function PublicBookingPage() {
                 </div>
               </div>
 
+              {/* Itemized Services in Summary */}
+              {appliedAddOns.length > 0 && (
+                <div className="border-t border-slate-100 pt-2 text-xs space-y-1">
+                  <span className="font-bold text-slate-700 block text-[11px] uppercase tracking-wider">
+                    Selected Extras:
+                  </span>
+                  {dynamicPricing?.calculatedAddOns.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-slate-600 text-[11px]">
+                      <span>
+                        {item.name} {item.quantity > 1 ? `(x${item.quantity})` : ""}
+                      </span>
+                      <span className="font-mono">{formatCurrency(item.subtotal)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Price Totals */}
               <div className="border-t border-slate-100 pt-2.5 space-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Nightly Rate:</span>
-                  <span className="font-mono">{formatCurrency(selectedSite.currentBaseRate)}</span>
+                  <span className="text-slate-500">Lodging Subtotal:</span>
+                  <span className="font-mono">{formatCurrency(dynamicPricing?.baseSubtotal || 0)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Base Subtotal:</span>
-                  <span className="font-mono">{formatCurrency(selectedSite.calculatedPricing?.baseSubtotal)}</span>
-                </div>
+
+                {dynamicPricing && dynamicPricing.addOnsSubtotal > 0 && (
+                  <div className="flex justify-between text-emerald-800 font-semibold">
+                    <span>Add-On Services:</span>
+                    <span className="font-mono">+{formatCurrency(dynamicPricing.addOnsSubtotal)}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between">
                   <span className="text-slate-500">Taxes (7.5%):</span>
-                  <span className="font-mono">+{formatCurrency(selectedSite.calculatedPricing?.taxAmount)}</span>
+                  <span className="font-mono">+{formatCurrency(dynamicPricing?.taxAmount || 0)}</span>
                 </div>
+
                 <div className="flex justify-between text-sm font-bold text-slate-900 pt-2 border-t border-slate-100">
                   <span>Total Due:</span>
                   <span className="text-emerald-700 font-mono font-black">
-                    {formatCurrency(selectedSite.calculatedPricing?.totalAmount)}
+                    {formatCurrency(dynamicPricing?.totalAmount || 0)}
                   </span>
                 </div>
               </div>

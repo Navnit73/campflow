@@ -19,6 +19,15 @@ export const publicAvailabilityQuerySchema = z
     path: ["checkOutDate"],
   });
 
+export const publicBookingAddOnSchema = z.object({
+  addOnId: z.string().optional(),
+  name: z.string().min(1, "Add-on name is required"),
+  price: z.coerce.number().min(0),
+  pricingType: z.enum(["per_stay", "per_night", "per_unit", "per_person"]).default("per_stay"),
+  quantity: z.coerce.number().min(1).default(1),
+  taxable: z.boolean().optional().default(true),
+});
+
 export const publicCreateBookingSchema = z
   .object({
     slug: z.string().min(1, "Property slug is required"),
@@ -28,6 +37,7 @@ export const publicCreateBookingSchema = z
     adults: z.coerce.number().min(1).default(2),
     children: z.coerce.number().min(0).default(0),
     pets: z.coerce.number().min(0).default(0),
+    addOns: z.array(publicBookingAddOnSchema).optional().default([]),
     discountCode: z.string().optional(),
     guest: z.object({
       firstName: z.string().min(1, "First name is required"),

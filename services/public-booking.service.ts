@@ -5,6 +5,7 @@ import { Guest } from "@/models/Guest";
 import { Reservation } from "@/models/Reservation";
 import { Discount } from "@/models/Discount";
 import { Payment } from "@/models/Payment";
+import { AddOn } from "@/models/AddOn";
 import {
   PublicAvailabilityQuery,
   PublicCreateBookingInput,
@@ -117,9 +118,18 @@ export class PublicBookingService {
         };
       });
 
+    // 4. Fetch active add-ons for the property
+    const availableAddOns = await AddOn.find({
+      propertyId: property._id,
+      isActive: true,
+    })
+      .sort({ sortOrder: 1, createdAt: 1 })
+      .lean();
+
     return {
       property,
       availableSites,
+      availableAddOns,
     };
   }
 
@@ -214,6 +224,7 @@ export class PublicBookingService {
       discountType: discountDoc?.type,
       discountValue: discountDoc?.value,
       paidAmount: 0, // Will be marked paid below
+      addOns: input.addOns,
     });
 
     // 5. Generate confirmation code
@@ -257,6 +268,15 @@ export class PublicBookingService {
       adults: input.adults,
       children: input.children,
       pets: input.pets,
+      addOns: pricing.calculatedAddOns.map((a) => ({
+        addOnId: a.addOnId ? new mongoose.Types.ObjectId(a.addOnId) : undefined,
+        name: a.name,
+        price: a.price,
+        pricingType: a.pricingType,
+        quantity: a.quantity,
+        subtotal: a.subtotal,
+        taxable: a.taxable,
+      })),
       status: "confirmed",
       pricing,
       discountId: discountDoc?._id,
