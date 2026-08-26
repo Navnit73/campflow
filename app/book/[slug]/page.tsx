@@ -6,6 +6,7 @@ import apiClient from "@/lib/axios/client";
 import { HookupIcons } from "@/components/ui/HookupIcons";
 import { RV_TYPES } from "@/lib/constants";
 import { formatCurrency, formatDate, formatRvType, formatRigType } from "@/lib/utils/format";
+import { parseDateOnly, formatDateKey, addDaysStr, diffDays } from "@/lib/utils/date";
 import {
   Trees,
   Search,
@@ -19,6 +20,7 @@ import {
   Phone,
   Mail,
   Inbox,
+  AlertCircle,
 } from "lucide-react";
 
 export default function PublicBookingPage() {
@@ -30,8 +32,8 @@ export default function PublicBookingPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Search parameters
-  const todayStr = new Date().toISOString().split("T")[0];
-  const defaultOut = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const todayStr = formatDateKey(new Date());
+  const defaultOut = addDaysStr(todayStr, 2);
 
   const [checkInDate, setCheckInDate] = useState(todayStr);
   const [checkOutDate, setCheckOutDate] = useState(defaultOut);
@@ -59,8 +61,20 @@ export default function PublicBookingPage() {
   const [discountCode, setDiscountCode] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
 
+  const handleCheckInChange = (newInDate: string) => {
+    setCheckInDate(newInDate);
+    if (!checkOutDate || checkOutDate <= newInDate) {
+      setCheckOutDate(addDaysStr(newInDate, 1));
+    }
+  };
+
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (checkOutDate <= checkInDate) {
+      setErrorMsg("Check-out date must be after check-in date.");
+      return;
+    }
+
     setErrorMsg("");
     setSearching(true);
     try {
@@ -80,7 +94,7 @@ export default function PublicBookingPage() {
 
       if (res.data?.success) {
         setProperty(res.data.data.property);
-        setAvailableSites(res.data.data.availableSites);
+        setAvailableSites(res.data.data.availableSites || []);
         setStep(2);
       }
     } catch (err: any) {
@@ -104,7 +118,7 @@ export default function PublicBookingPage() {
       .then((res) => {
         if (res.data?.success) {
           setProperty(res.data.data.property);
-          setAvailableSites(res.data.data.availableSites);
+          setAvailableSites(res.data.data.availableSites || []);
         }
       })
       .catch(() => {});
@@ -151,7 +165,13 @@ export default function PublicBookingPage() {
         router.push(`/book/${slug}/confirmation/${code}`);
       }
     } catch (err: any) {
-      setErrorMsg(err?.message || "Booking submission failed. Please try again.");
+      const msg = err?.response?.data?.message || err?.message || "Booking submission failed. Please try again.";
+      setErrorMsg(msg);
+      // If site was taken, allow switching back to step 2
+      if (err?.response?.status === 409 || msg.includes("booked") || msg.includes("available")) {
+        // Refresh availability
+        handleSearch();
+      }
     } finally {
       setSubmitting(false);
     }
@@ -259,7 +279,7 @@ export default function PublicBookingPage() {
                   <input
                     type="date"
                     value={checkInDate}
-                    onChange={(e) => setCheckInDate(e.target.value)}
+                    onChange={(e) => handleCheckInChange(e.target.value)}
                     min={todayStr}
                     className="input input-bordered input-sm w-full font-medium rounded-md"
                     required
@@ -271,7 +291,7 @@ export default function PublicBookingPage() {
                     type="date"
                     value={checkOutDate}
                     onChange={(e) => setCheckOutDate(e.target.value)}
-                    min={checkInDate}
+                    min={addDaysStr(checkInDate, 1)}
                     className="input input-bordered input-sm w-full font-medium rounded-md"
                     required
                   />

@@ -13,23 +13,27 @@ import {
 import { calculatePricing } from "@/lib/utils/pricing";
 import { generateConfirmationCode } from "@/lib/utils/code-generator";
 import { connectDB } from "@/lib/db/connection";
+import { parseDateOnly, formatDateKey, addDays } from "@/lib/utils/date";
 
 export class ReservationService {
   static async checkSiteAvailability(
     propertyId: string | mongoose.Types.ObjectId,
     siteId: string | mongoose.Types.ObjectId,
-    checkInDate: Date,
-    checkOutDate: Date,
+    checkInDate: Date | string,
+    checkOutDate: Date | string,
     excludeReservationId?: string | mongoose.Types.ObjectId
   ): Promise<boolean> {
     await connectDB();
+
+    const dIn = parseDateOnly(checkInDate);
+    const dOut = parseDateOnly(checkOutDate);
 
     const query: Record<string, any> = {
       propertyId: new mongoose.Types.ObjectId(propertyId),
       siteId: new mongoose.Types.ObjectId(siteId),
       status: { $in: ["confirmed", "checked_in", "pending"] },
-      checkInDate: { $lt: checkOutDate },
-      checkOutDate: { $gt: checkInDate },
+      checkInDate: { $lt: dOut },
+      checkOutDate: { $gt: dIn },
     };
 
     if (excludeReservationId) {
@@ -40,6 +44,62 @@ export class ReservationService {
     return !conflicting;
   }
 
+  static async checkAllSitesAvailability(
+    organizationId: string,
+    propertyId: string,
+    checkInDate: Date | string,
+    checkOutDate: Date | string,
+    excludeReservationId?: string | mongoose.Types.ObjectId
+  ) {
+    await connectDB();
+
+    const dIn = parseDateOnly(checkInDate);
+    const dOut = parseDateOnly(checkOutDate);
+
+    const [sites, reservations] = await Promise.all([
+      Site.find({
+        organizationId: new mongoose.Types.ObjectId(organizationId),
+        propertyId: new mongoose.Types.ObjectId(propertyId),
+      })
+        .sort({ sortOrder: 1, siteNumber: 1 })
+        .lean(),
+      Reservation.find({
+        organizationId: new mongoose.Types.ObjectId(organizationId),
+        propertyId: new mongoose.Types.ObjectId(propertyId),
+        status: { $in: ["confirmed", "checked_in", "pending"] },
+        checkInDate: { $lt: dOut },
+        checkOutDate: { $gt: dIn },
+        ...(excludeReservationId ? { _id: { $ne: new mongoose.Types.ObjectId(excludeReservationId) } } : {}),
+      })
+        .select("siteId confirmationCode guestSnapshot checkInDate checkOutDate status")
+        .lean(),
+    ]);
+
+    const conflictMap = new Map<string, any>();
+    reservations.forEach((r) => {
+      const sId = r.siteId?.toString();
+      if (sId) conflictMap.set(sId, r);
+    });
+
+    return sites.map((site) => {
+      const conflict = conflictMap.get(site._id.toString());
+      const isOffline = site.status === "maintenance" || site.status === "inactive";
+      const isAvailable = !conflict && !isOffline;
+
+      return {
+        ...site,
+        isAvailable,
+        isOffline,
+        conflictReason: conflict
+          ? `Booked by ${conflict.guestSnapshot?.fullName || "Guest"} (${conflict.confirmationCode})`
+          : isOffline
+          ? `Site is currently ${site.status}`
+          : null,
+        conflictingReservation: conflict || null,
+      };
+    });
+  }
+
   static async createReservation(
     organizationId: string,
     propertyId: string,
@@ -48,8 +108,8 @@ export class ReservationService {
   ) {
     await connectDB();
 
-    const dIn = new Date(input.checkInDate + "T00:00:00Z");
-    const dOut = new Date(input.checkOutDate + "T00:00:00Z");
+    const dIn = parseDateOnly(input.checkInDate);
+    const dOut = parseDateOnly(input.checkOutDate);
 
     if (dOut <= dIn) {
       const err = new Error("Check-out date must be after check-in date");
@@ -297,8 +357,8 @@ export class ReservationService {
       throw err;
     }
 
-    const newCheckIn = input.checkInDate ? new Date(input.checkInDate + "T00:00:00Z") : reservation.checkInDate;
-    const newCheckOut = input.checkOutDate ? new Date(input.checkOutDate + "T00:00:00Z") : reservation.checkOutDate;
+    const newCheckIn = input.checkInDate ? parseDateOnly(input.checkInDate) : parseDateOnly(reservation.checkInDate);
+    const newCheckOut = input.checkOutDate ? parseDateOnly(input.checkOutDate) : parseDateOnly(reservation.checkOutDate);
     const newSiteId = input.siteId ? new mongoose.Types.ObjectId(input.siteId) : reservation.siteId;
 
     if (newCheckOut <= newCheckIn) {
@@ -529,8 +589,8 @@ export class ReservationService {
   static async getTapeChartData(organizationId: string, propertyId: string, startDateStr: string, days = 14) {
     await connectDB();
 
-    const startDate = new Date(startDateStr + "T00:00:00Z");
-    const endDate = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
+    const startDate = parseDateOnly(startDateStr);
+    const endDate = addDays(startDate, days);
 
     const [sites, reservations] = await Promise.all([
       Site.find({
@@ -552,7 +612,7 @@ export class ReservationService {
     ]);
 
     return {
-      startDate: startDateStr,
+      startDate: formatDateKey(startDate),
       days,
       sites,
       reservations,

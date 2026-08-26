@@ -7,7 +7,8 @@ import { useToast } from "@/components/ui/Toast";
 import { RV_TYPES } from "@/lib/constants";
 import { calculatePricing } from "@/lib/utils/pricing";
 import { formatCurrency, formatRvType } from "@/lib/utils/format";
-import { Loader2, Calendar, User, CreditCard, MapPin, Truck } from "lucide-react";
+import { parseDateOnly, formatDateKey, addDaysStr } from "@/lib/utils/date";
+import { Loader2, Calendar, User, CreditCard, MapPin, Truck, AlertCircle } from "lucide-react";
 
 interface NewReservationModalProps {
   isOpen: boolean;
@@ -30,14 +31,15 @@ export function NewReservationModal({
   const [loading, setLoading] = useState(false);
   const [sites, setSites] = useState<any[]>([]);
   const [existingGuests, setExistingGuests] = useState<any[]>([]);
+  const [availabilityMap, setAvailabilityMap] = useState<Record<string, { isAvailable: boolean; conflictReason: string | null }>>({});
 
   // Guest Mode: 'new' or 'existing'
   const [guestMode, setGuestMode] = useState<"new" | "existing">("new");
   const [selectedGuestId, setSelectedGuestId] = useState<string>("");
 
   // Form State
-  const today = new Date().toISOString().split("T")[0];
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const today = formatDateKey(new Date());
+  const tomorrow = addDaysStr(today, 1);
 
   const [siteId, setSiteId] = useState(initialSiteId || "");
   const [checkInDate, setCheckInDate] = useState(initialDate || today);
@@ -65,7 +67,7 @@ export function NewReservationModal({
   // Load sites & guests
   useEffect(() => {
     if (isOpen) {
-      apiClient.get("/api/sites?status=available").then((res) => {
+      apiClient.get("/api/sites").then((res) => {
         if (res.data?.success) {
           setSites(res.data.data);
           if (!siteId && res.data.data.length > 0) {
@@ -82,12 +84,41 @@ export function NewReservationModal({
     }
   }, [isOpen]);
 
+  // Query site availability for chosen dates
+  useEffect(() => {
+    if (isOpen && checkInDate && checkOutDate && checkOutDate > checkInDate) {
+      apiClient
+        .get("/api/reservations/availability", {
+          params: { checkInDate, checkOutDate },
+        })
+        .then((res) => {
+          if (res.data?.success) {
+            const map: Record<string, { isAvailable: boolean; conflictReason: string | null }> = {};
+            res.data.data.forEach((s: any) => {
+              map[s._id] = {
+                isAvailable: s.isAvailable,
+                conflictReason: s.conflictReason,
+              };
+            });
+            setAvailabilityMap(map);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, checkInDate, checkOutDate]);
+
+  const handleCheckInChange = (newIn: string) => {
+    setCheckInDate(newIn);
+    if (!checkOutDate || checkOutDate <= newIn) {
+      setCheckOutDate(addDaysStr(newIn, 1));
+    }
+  };
+
   useEffect(() => {
     if (initialSiteId) setSiteId(initialSiteId);
     if (initialDate && !isNaN(new Date(initialDate + "T00:00:00Z").getTime())) {
       setCheckInDate(initialDate);
-      const dOut = new Date(new Date(initialDate + "T00:00:00Z").getTime() + 2 * 24 * 60 * 60 * 1000);
-      setCheckOutDate(dOut.toISOString().split("T")[0]);
+      setCheckOutDate(addDaysStr(initialDate, 2));
     }
     if (initialGuest) {
       setGuestMode("existing");
@@ -124,6 +155,8 @@ export function NewReservationModal({
   const selectedSite = sites.find((s) => s._id === siteId);
   const maxRig = selectedSite?.siteTypeSnapshot?.maxRigLength ?? 45;
   const isLengthIncompatible = Number(rvLengthFt) > maxRig;
+  const isSiteAvailable = availabilityMap[siteId]?.isAvailable ?? true;
+  const conflictReason = availabilityMap[siteId]?.conflictReason;
 
   const pricing = calculatePricing({
     nightlyRate: selectedSite?.currentBaseRate || 50,
@@ -215,17 +248,39 @@ export function NewReservationModal({
             <select
               value={siteId}
               onChange={(e) => setSiteId(e.target.value)}
-              className="select select-bordered select-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm"
+              className={`select select-bordered select-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm ${
+                !isSiteAvailable ? "border-rose-400 focus:border-rose-500" : ""
+              }`}
               required
             >
               <option value="" disabled>Select a site...</option>
-              {sites.map((s) => (
-                <option key={s._id} value={s._id}>
-                  Site {s.siteNumber} — {s.siteTypeSnapshot?.name || "Standard"} ({formatCurrency(s.currentBaseRate)}/nt) • Max {s.siteTypeSnapshot?.maxRigLength || 40}ft
-                </option>
-              ))}
+              {sites.map((s) => {
+                const avail = availabilityMap[s._id];
+                const isAvail = avail ? avail.isAvailable : s.status === "available";
+                const labelSuffix = avail
+                  ? isAvail
+                    ? "✓ Available"
+                    : `✗ ${avail.conflictReason || "Unavailable"}`
+                  : "";
+
+                return (
+                  <option key={s._id} value={s._id} disabled={avail && !isAvail}>
+                    Site {s.siteNumber} — {s.siteTypeSnapshot?.name || "Standard"} ({formatCurrency(s.currentBaseRate)}/nt) {labelSuffix ? `• ${labelSuffix}` : ""}
+                  </option>
+                );
+              })}
             </select>
           </div>
+
+          {/* Availability Conflict Alert */}
+          {!isSiteAvailable && (
+            <div className="p-2.5 rounded-md bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-800 font-semibold">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>
+                Site {selectedSite?.siteNumber} is {conflictReason || "unavailable for the selected dates"}.
+              </span>
+            </div>
+          )}
 
           {/* Compatibility Alert */}
           {isLengthIncompatible && (
@@ -244,7 +299,7 @@ export function NewReservationModal({
               <input
                 type="date"
                 value={checkInDate}
-                onChange={(e) => setCheckInDate(e.target.value)}
+                onChange={(e) => handleCheckInChange(e.target.value)}
                 className="input input-bordered input-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm"
                 required
               />
@@ -257,7 +312,7 @@ export function NewReservationModal({
                 value={checkOutDate}
                 onChange={(e) => setCheckOutDate(e.target.value)}
                 className="input input-bordered input-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm"
-                min={checkInDate}
+                min={addDaysStr(checkInDate, 1)}
                 required
               />
             </div>

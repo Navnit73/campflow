@@ -12,6 +12,7 @@ import {
 import { calculatePricing } from "@/lib/utils/pricing";
 import { generateConfirmationCode } from "@/lib/utils/code-generator";
 import { connectDB } from "@/lib/db/connection";
+import { parseDateOnly } from "@/lib/utils/date";
 
 export class PublicBookingService {
   static async getPropertyBySlug(slug: string) {
@@ -39,8 +40,8 @@ export class PublicBookingService {
     await connectDB();
 
     const property = await this.getPropertyBySlug(params.slug);
-    const dIn = new Date(params.checkInDate + "T00:00:00Z");
-    const dOut = new Date(params.checkOutDate + "T00:00:00Z");
+    const dIn = parseDateOnly(params.checkInDate);
+    const dOut = parseDateOnly(params.checkOutDate);
 
     if (dOut <= dIn) {
       const err = new Error("Check-out date must be after check-in date");
@@ -126,8 +127,14 @@ export class PublicBookingService {
     await connectDB();
 
     const property = await this.getPropertyBySlug(input.slug);
-    const dIn = new Date(input.checkInDate + "T00:00:00Z");
-    const dOut = new Date(input.checkOutDate + "T00:00:00Z");
+    const dIn = parseDateOnly(input.checkInDate);
+    const dOut = parseDateOnly(input.checkOutDate);
+
+    if (dOut <= dIn) {
+      const err = new Error("Check-out date must be after check-in date");
+      err.name = "ValidationError";
+      throw err;
+    }
 
     // 1. Site check
     const site = await Site.findOne({
@@ -137,7 +144,7 @@ export class PublicBookingService {
     }).lean();
 
     if (!site) {
-      const err = new Error("The selected site is no longer available.");
+      const err = new Error("The selected site is no longer available or under maintenance.");
       err.name = "NotFoundError";
       throw err;
     }

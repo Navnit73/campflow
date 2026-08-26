@@ -1,3 +1,5 @@
+import { parseDateOnly, diffDays } from "@/lib/utils/date";
+
 export interface CalculatePricingParams {
   nightlyRate: number;
   checkInDate: Date | string;
@@ -25,13 +27,8 @@ export function calculatePricing(params: CalculatePricingParams): PricingResult 
 
   let numNights = 1;
   try {
-    const dIn = typeof params.checkInDate === "string" ? new Date(params.checkInDate) : params.checkInDate;
-    const dOut = typeof params.checkOutDate === "string" ? new Date(params.checkOutDate) : params.checkOutDate;
-
-    if (dIn && dOut && !isNaN(dIn.getTime()) && !isNaN(dOut.getTime())) {
-      const diffTime = Math.abs(dOut.getTime() - dIn.getTime());
-      numNights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-    }
+    const nights = diffDays(params.checkInDate, params.checkOutDate);
+    numNights = Math.max(1, nights);
   } catch {
     numNights = 1;
   }

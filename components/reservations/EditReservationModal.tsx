@@ -7,7 +7,8 @@ import { useToast } from "@/components/ui/Toast";
 import { RV_TYPES, RESERVATION_STATUSES } from "@/lib/constants";
 import { calculatePricing } from "@/lib/utils/pricing";
 import { formatCurrency, formatRvType } from "@/lib/utils/format";
-import { Loader2, Calendar, User, CreditCard, MapPin, Truck, AlertTriangle } from "lucide-react";
+import { parseDateOnly, formatDateKey, addDaysStr } from "@/lib/utils/date";
+import { Loader2, Calendar, User, CreditCard, MapPin, Truck, AlertTriangle, AlertCircle } from "lucide-react";
 
 interface EditReservationModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function EditReservationModal({
   const { success, error } = useToast();
   const [loading, setLoading] = useState(false);
   const [sites, setSites] = useState<any[]>([]);
+  const [availabilityMap, setAvailabilityMap] = useState<Record<string, { isAvailable: boolean; conflictReason: string | null }>>({});
 
   // Form States
   const [siteId, setSiteId] = useState("");
@@ -59,8 +61,8 @@ export function EditReservationModal({
   useEffect(() => {
     if (reservation) {
       setSiteId(reservation.siteId?._id || reservation.siteId || "");
-      const dIn = new Date(reservation.checkInDate).toISOString().split("T")[0];
-      const dOut = new Date(reservation.checkOutDate).toISOString().split("T")[0];
+      const dIn = formatDateKey(reservation.checkInDate);
+      const dOut = formatDateKey(reservation.checkOutDate);
       setCheckInDate(dIn);
       setCheckOutDate(dOut);
       setAdults(reservation.adults ?? 2);
@@ -79,10 +81,46 @@ export function EditReservationModal({
     }
   }, [reservation, isOpen]);
 
+  // Query site availability for changed dates/site, excluding current reservation
+  useEffect(() => {
+    if (isOpen && checkInDate && checkOutDate && checkOutDate > checkInDate && reservation?._id) {
+      apiClient
+        .get("/api/reservations/availability", {
+          params: {
+            checkInDate,
+            checkOutDate,
+            excludeReservationId: reservation._id,
+          },
+        })
+        .then((res) => {
+          if (res.data?.success) {
+            const map: Record<string, { isAvailable: boolean; conflictReason: string | null }> = {};
+            res.data.data.forEach((s: any) => {
+              map[s._id] = {
+                isAvailable: s.isAvailable,
+                conflictReason: s.conflictReason,
+              };
+            });
+            setAvailabilityMap(map);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, checkInDate, checkOutDate, reservation?._id]);
+
+  const handleCheckInChange = (newIn: string) => {
+    setCheckInDate(newIn);
+    if (!checkOutDate || checkOutDate <= newIn) {
+      setCheckOutDate(addDaysStr(newIn, 1));
+    }
+  };
+
   // Selected site for compatibility checking
   const selectedSite = sites.find((s) => s._id === siteId);
   const maxRig = selectedSite?.siteTypeSnapshot?.maxRigLength ?? 45;
   const isLengthIncompatible = Number(rvLengthFt) > maxRig;
+  const isSiteAvailable = availabilityMap[siteId]?.isAvailable ?? true;
+  const conflictReason = availabilityMap[siteId]?.conflictReason;
 
   // Recalculate estimated pricing
   const pricing = calculatePricing({
@@ -160,14 +198,26 @@ export function EditReservationModal({
               <select
                 value={siteId}
                 onChange={(e) => setSiteId(e.target.value)}
-                className="select select-bordered select-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm"
+                className={`select select-bordered select-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm ${
+                  !isSiteAvailable ? "border-rose-400 focus:border-rose-500" : ""
+                }`}
                 required
               >
-                {sites.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    Site {s.siteNumber} — {s.siteTypeSnapshot?.name} ({formatCurrency(s.currentBaseRate)}/nt)
-                  </option>
-                ))}
+                {sites.map((s) => {
+                  const avail = availabilityMap[s._id];
+                  const isAvail = avail ? avail.isAvailable : true;
+                  const labelSuffix = avail
+                    ? isAvail
+                      ? "✓ Available"
+                      : `✗ ${avail.conflictReason || "Unavailable"}`
+                    : "";
+
+                  return (
+                    <option key={s._id} value={s._id} disabled={avail && !isAvail}>
+                      Site {s.siteNumber} — {s.siteTypeSnapshot?.name} ({formatCurrency(s.currentBaseRate)}/nt) {labelSuffix ? `• ${labelSuffix}` : ""}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -186,6 +236,16 @@ export function EditReservationModal({
               </select>
             </div>
           </div>
+
+          {/* Availability Conflict Alert */}
+          {!isSiteAvailable && (
+            <div className="p-2.5 rounded-md bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-800 font-semibold">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>
+                Site {selectedSite?.siteNumber} is {conflictReason || "unavailable for the selected dates"}.
+              </span>
+            </div>
+          )}
 
           {/* Compatibility Warning if RV length exceeds site limit */}
           {isLengthIncompatible && (
@@ -206,7 +266,7 @@ export function EditReservationModal({
               <input
                 type="date"
                 value={checkInDate}
-                onChange={(e) => setCheckInDate(e.target.value)}
+                onChange={(e) => handleCheckInChange(e.target.value)}
                 className="input input-bordered input-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm"
                 required
               />
@@ -219,7 +279,7 @@ export function EditReservationModal({
                 value={checkOutDate}
                 onChange={(e) => setCheckOutDate(e.target.value)}
                 className="input input-bordered input-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm"
-                min={checkInDate}
+                min={addDaysStr(checkInDate, 1)}
                 required
               />
             </div>
@@ -266,53 +326,53 @@ export function EditReservationModal({
           </div>
         </div>
 
-        {/* Section 2: Guest Details & Rig */}
+        {/* Section 2: Guest Details */}
         <div className="p-3 sm:p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
           <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700 pb-1 border-b border-slate-200/60">
             <User className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            2. Guest Information & RV Rig
+            2. Guest Information & Equipment
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="w-full">
+            <div>
               <label className="label text-xs font-bold text-slate-700 py-0.5">Full Name</label>
               <input
                 type="text"
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                className="input input-bordered input-sm w-full bg-white rounded-md font-medium"
+                className="input input-bordered input-sm w-full bg-white rounded-md text-xs sm:text-sm font-medium"
                 required
               />
             </div>
-            <div className="w-full">
-              <label className="label text-xs font-bold text-slate-700 py-0.5">Email</label>
+            <div>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Email Address</label>
               <input
                 type="email"
                 value={guestEmail}
                 onChange={(e) => setGuestEmail(e.target.value)}
-                className="input input-bordered input-sm w-full bg-white rounded-md"
+                className="input input-bordered input-sm w-full bg-white rounded-md text-xs sm:text-sm"
                 required
               />
             </div>
-            <div className="w-full">
-              <label className="label text-xs font-bold text-slate-700 py-0.5">Phone</label>
+            <div>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Phone Number</label>
               <input
                 type="tel"
                 value={guestPhone}
                 onChange={(e) => setGuestPhone(e.target.value)}
-                className="input input-bordered input-sm w-full font-mono bg-white rounded-md"
+                className="input input-bordered input-sm w-full bg-white rounded-md text-xs sm:text-sm font-mono"
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-200/60">
-            <div className="w-full">
-              <label className="label text-xs font-bold text-slate-700 py-0.5">RV Rig Type</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">RV / Rig Type</label>
               <select
                 value={rvType}
                 onChange={(e) => setRvType(e.target.value)}
-                className="select select-bordered select-sm w-full bg-white rounded-md text-xs"
+                className="select select-bordered select-sm w-full bg-white rounded-md text-xs sm:text-sm"
               >
                 {RV_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -321,75 +381,76 @@ export function EditReservationModal({
                 ))}
               </select>
             </div>
-            <div className="w-full">
-              <label className="label text-xs font-bold text-slate-700 py-0.5">RV Length (ft)</label>
+            <div>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Rig Length (Feet)</label>
               <input
                 type="number"
                 min={0}
-                max={60}
+                max={55}
                 value={rvLengthFt}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => setRvLengthFt(e.target.value === "" ? "" : Number(e.target.value))}
-                className="input input-bordered input-sm w-full font-mono bg-white rounded-md"
+                className="input input-bordered input-sm w-full bg-white rounded-md font-mono"
               />
             </div>
           </div>
         </div>
 
-        {/* Section 3: Billing Recalculation & Notes */}
-        <div className="p-3 sm:p-4 rounded-lg border border-slate-200 bg-white space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
-              <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              3. Rate Recalculation
-            </div>
-            <div className="text-right">
-              <span className="text-xs text-slate-500 font-mono">
-                {pricing.numNights} Nights • Total: {formatCurrency(pricing.totalAmount)} • Paid: {formatCurrency(pricing.paidAmount)} • Balance Due:{" "}
-              </span>
-              <span className="text-sm font-black text-rose-700 font-mono">
-                {formatCurrency(pricing.balanceDue)}
-              </span>
-            </div>
-          </div>
-
+        {/* Section 3: Notes & Pricing Summary */}
+        <div className="p-3 sm:p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="w-full">
-              <label className="label text-xs font-bold text-slate-700 py-0.5">Guest Requests</label>
-              <input
-                type="text"
+            <div>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Special Requests</label>
+              <textarea
                 value={specialRequests}
                 onChange={(e) => setSpecialRequests(e.target.value)}
-                placeholder="Near bathhouse, quiet area..."
-                className="input input-bordered input-sm w-full rounded-md"
+                className="textarea textarea-bordered textarea-sm w-full bg-white rounded-md"
+                rows={2}
               />
             </div>
-            <div className="w-full">
-              <label className="label text-xs font-bold text-slate-700 py-0.5">Staff Notes</label>
-              <input
-                type="text"
+            <div>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Internal Staff Notes</label>
+              <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Gate code given, late arrival..."
-                className="input input-bordered input-sm w-full rounded-md"
+                className="textarea textarea-bordered textarea-sm w-full bg-white rounded-md"
+                rows={2}
               />
+            </div>
+          </div>
+
+          {/* Pricing Details */}
+          <div className="p-3 rounded-md bg-white border border-slate-200 space-y-1.5 text-xs">
+            <div className="flex justify-between text-slate-600">
+              <span>
+                Nightly Rate ({pricing.numNights} night{pricing.numNights > 1 ? "s" : ""} @ {formatCurrency(pricing.nightlyRate)}):
+              </span>
+              <span className="font-mono">{formatCurrency(pricing.baseSubtotal)}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>Taxes & Fees (7.5%):</span>
+              <span className="font-mono">{formatCurrency(pricing.taxAmount)}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>Paid to Date:</span>
+              <span className="font-mono text-emerald-700">-{formatCurrency(pricing.paidAmount)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-bold text-slate-900 pt-1.5 border-t border-slate-100">
+              <span>Balance Due:</span>
+              <span className="text-emerald-700 font-mono font-black">{formatCurrency(pricing.balanceDue)}</span>
             </div>
           </div>
         </div>
 
-        {/* Footer CTAs */}
-        <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-ghost btn-sm w-full sm:w-auto font-semibold rounded-md"
-          >
+        {/* Modal Actions */}
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm">
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="btn btn-primary btn-sm w-full sm:w-auto min-w-[140px] font-bold rounded-md"
+            className="btn btn-primary btn-sm px-5 font-bold"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
           </button>

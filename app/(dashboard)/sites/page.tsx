@@ -179,12 +179,12 @@ export default function SitesPage() {
           {siteTypes.map((st) => (
             <div
               key={st._id}
-              className="surface-card p-3.5 rounded-lg border border-slate-200 hover:border-slate-300 transition-all space-y-2"
+              className="surface-card p-3.5 rounded-lg border border-slate-200 hover:border-slate-300 transition-all space-y-2 min-w-0"
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900">{st.name}</h4>
-                  <span className="text-xs font-black text-emerald-700 font-mono">
+              <div className="flex items-start justify-between gap-2 min-w-0">
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-sm text-slate-900 truncate" title={st.name}>{st.name}</h4>
+                  <span className="text-xs font-black text-emerald-700 font-mono block whitespace-nowrap">
                     {formatCurrency(st.defaultBaseRate)} / nt
                   </span>
                 </div>
@@ -193,14 +193,14 @@ export default function SitesPage() {
                     setTypeToEdit(st);
                     setIsTypeModalOpen(true);
                   }}
-                  className="btn btn-ghost btn-xs btn-circle text-slate-500 hover:text-slate-900"
+                  className="btn btn-ghost btn-xs btn-circle text-slate-500 hover:text-slate-900 shrink-0"
                   title="Edit Category"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <HookupIcons
                   hookups={st.hookups}
                   maxRigLength={st.maxRigLength}
@@ -208,7 +208,7 @@ export default function SitesPage() {
                 />
               </div>
 
-              <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100 font-medium">
+              <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100 font-medium truncate" title={`Max ${st.maxOccupancy} guests • Max ${st.maxRigLength}ft rig`}>
                 Max {st.maxOccupancy} guests • Max {st.maxRigLength}ft rig
               </div>
             </div>
@@ -284,7 +284,7 @@ export default function SitesPage() {
               <p className="text-sm font-semibold text-slate-700">No sites matching filters</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3.5">
               {sites.map((site) => {
                 const currentRes = siteOccupancyMap.get(site._id.toString());
                 const isOccupied = !!currentRes;
@@ -292,7 +292,7 @@ export default function SitesPage() {
                 return (
                   <div
                     key={site._id}
-                    className={`surface-card rounded-lg border p-3.5 flex flex-col justify-between transition-all hover:shadow-md ${
+                    className={`surface-card rounded-lg border p-3.5 flex flex-col justify-between transition-all hover:shadow-md min-w-0 ${
                       site.status === "maintenance"
                         ? "border-amber-300 bg-amber-50/30"
                         : site.status === "inactive"
@@ -303,30 +303,30 @@ export default function SitesPage() {
                     }`}
                   >
                     {/* Site Header */}
-                    <div>
-                      <div className="flex items-start justify-between gap-1.5">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-black text-base text-slate-900">
+                    <div className="min-w-0">
+                      <div className="flex items-start justify-between gap-1.5 min-w-0">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-mono font-black text-base text-slate-900 truncate">
                               Site {site.siteNumber}
                             </span>
                             {site.petFriendly && (
-                              <span title="Pet Friendly" className="text-xs">
+                              <span title="Pet Friendly" className="text-xs shrink-0">
                                 🐾
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-500 font-medium truncate">
+                          <div className="text-[11px] text-slate-500 font-medium truncate" title={site.siteTypeSnapshot?.name}>
                             {site.siteTypeSnapshot?.name}
                           </div>
                         </div>
 
-                        <div className="text-right shrink-0">
-                          <span className="font-black text-sm text-emerald-700 font-mono block">
+                        <div className="text-right shrink-0 pl-1">
+                          <span className="font-black text-sm text-emerald-700 font-mono block whitespace-nowrap">
                             {formatCurrency(site.currentBaseRate)}
                           </span>
                           {site.weekendBaseRate ? (
-                            <span className="text-[10px] text-slate-400 font-mono block">
+                            <span className="text-[10px] text-slate-400 font-mono block whitespace-nowrap">
                               Wkd: {formatCurrency(site.weekendBaseRate)}
                             </span>
                           ) : null}
@@ -334,7 +334,7 @@ export default function SitesPage() {
                       </div>
 
                       {/* Hookup Specs */}
-                      <div className="mt-2 pt-2 border-t border-slate-100">
+                      <div className="mt-2 pt-2 border-t border-slate-100 min-w-0">
                         <HookupIcons
                           hookups={site.siteTypeSnapshot?.hookups}
                           rigType={site.rigType}
@@ -347,24 +347,24 @@ export default function SitesPage() {
                       {isOccupied && (
                         <div
                           onClick={() => setSelectedResId(currentRes._id)}
-                          className="mt-2 p-2 rounded-md bg-sky-100/70 border border-sky-200 text-xs cursor-pointer hover:bg-sky-100 transition-colors"
+                          className="mt-2 p-2 rounded-md bg-sky-100/70 border border-sky-200 text-xs cursor-pointer hover:bg-sky-100 transition-colors min-w-0"
                         >
                           <div className="flex items-center gap-1 font-bold text-sky-900 truncate">
                             <User className="w-3 h-3 text-sky-700 shrink-0" />
                             <span className="truncate">{currentRes.guestSnapshot?.fullName}</span>
                           </div>
-                          <div className="text-[10px] text-sky-700 flex items-center gap-1 mt-0.5 font-medium">
+                          <div className="text-[10px] text-sky-700 flex items-center gap-1 mt-0.5 font-medium truncate">
                             <Calendar className="w-3 h-3 shrink-0" />
-                            <span>Departs: {formatDate(currentRes.checkOutDate)}</span>
+                            <span className="truncate">Departs: {formatDate(currentRes.checkOutDate)}</span>
                           </div>
                         </div>
                       )}
 
                       {/* Maintenance status note */}
                       {site.status === "maintenance" && (
-                        <div className="mt-2 p-1.5 rounded-md bg-amber-100/70 border border-amber-200 text-[11px] text-amber-800 flex items-center gap-1 font-medium">
+                        <div className="mt-2 p-1.5 rounded-md bg-amber-100/70 border border-amber-200 text-[11px] text-amber-800 flex items-center gap-1 font-medium min-w-0">
                           <Wrench className="w-3 h-3 shrink-0" />
-                          <span>{site.notes || "Under Maintenance"}</span>
+                          <span className="truncate">{site.notes || "Under Maintenance"}</span>
                         </div>
                       )}
                     </div>
