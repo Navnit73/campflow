@@ -12,6 +12,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Receipt,
+  Inbox,
+  TrendingUp,
+  Hash,
 } from "lucide-react";
 
 export default function PaymentsPage() {
@@ -48,10 +51,10 @@ export default function PaymentsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-base-content">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
             Payment Transactions & Ledger
           </h1>
-          <p className="text-xs text-base-content/60 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Audit trail of credit card, cash, and online payments collected
           </p>
         </div>
@@ -59,88 +62,104 @@ export default function PaymentsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => fetchPayments(pagination.page)}
-            className="btn btn-ghost btn-sm btn-circle"
+            className="btn btn-ghost btn-sm btn-circle text-slate-600 hover:text-slate-900 rounded-md"
             title="Refresh Ledger"
+            aria-label="Refresh Ledger"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-emerald-600" : ""}`} />
           </button>
         </div>
       </div>
 
-      {/* Summary Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="card bg-base-100 border border-base-200 p-4">
-          <div className="text-xs font-semibold text-base-content/60 uppercase">Page Total Collected</div>
-          <div className="text-2xl font-bold text-emerald-600 font-mono mt-1">
+      {/* Summary Banner Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="surface-card p-3.5 rounded-lg space-y-1 border border-slate-200">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <span>Page Total Collected</span>
+            <DollarSign className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div className="text-2xl font-black text-emerald-700 font-mono">
             {formatCurrency(totalCollected)}
           </div>
         </div>
-        <div className="card bg-base-100 border border-base-200 p-4">
-          <div className="text-xs font-semibold text-base-content/60 uppercase">Total Transactions</div>
-          <div className="text-2xl font-bold text-base-content font-mono mt-1">
+
+        <div className="surface-card p-3.5 rounded-lg space-y-1 border border-slate-200">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <span>Total Transactions</span>
+            <Hash className="w-4 h-4 text-slate-400" />
+          </div>
+          <div className="text-2xl font-black text-slate-900 font-mono">
             {pagination.total}
           </div>
         </div>
-        <div className="card bg-base-100 border border-base-200 p-4">
-          <div className="text-xs font-semibold text-base-content/60 uppercase">Average Payment</div>
-          <div className="text-2xl font-bold text-sky-600 font-mono mt-1">
+
+        <div className="surface-card p-3.5 rounded-lg space-y-1 border border-slate-200">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <span>Average Payment</span>
+            <TrendingUp className="w-4 h-4 text-sky-600" />
+          </div>
+          <div className="text-2xl font-black text-sky-700 font-mono">
             {payments.length > 0 ? formatCurrency(totalCollected / payments.length) : "$0.00"}
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table table-sm">
-            <thead className="bg-base-200/50">
+      <div className="surface-card rounded-lg overflow-hidden border border-slate-200">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="table table-sm min-w-[780px]">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
               <tr>
-                <th>Date & Time</th>
-                <th>Confirmation</th>
-                <th>Guest</th>
-                <th>Method</th>
-                <th>Transaction Ref</th>
-                <th>Status</th>
-                <th className="text-right">Amount</th>
+                <th className="min-w-[140px]">Date & Time</th>
+                <th className="min-w-[110px]">Confirmation</th>
+                <th className="min-w-[180px]">Guest</th>
+                <th className="min-w-[100px]">Method</th>
+                <th className="min-w-[130px]">Transaction Ref</th>
+                <th className="min-w-[100px]">Status</th>
+                <th className="text-right min-w-[100px]">Amount</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-xs text-base-content/60">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
-                    Loading payment transactions...
+                  <td colSpan={7} className="text-center py-14 text-xs text-slate-500 space-y-2">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto text-emerald-600 mb-1" />
+                    <p>Loading payment transactions...</p>
                   </td>
                 </tr>
               ) : payments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-sm text-base-content/50">
-                    No payment records found.
+                  <td colSpan={7} className="text-center py-14 space-y-2">
+                    <div className="w-10 h-10 rounded-md bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                      <Inbox className="w-5 h-5" />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-700">No payment records found</p>
+                    <p className="text-xs text-slate-500">Payments recorded at check-in or booking will appear here.</p>
                   </td>
                 </tr>
               ) : (
                 payments.map((p) => (
-                  <tr key={p._id} className="hover:bg-base-200/40">
-                    <td className="text-xs">{formatDateTime(p.createdAt)}</td>
-                    <td className="font-mono font-bold text-xs text-primary">
+                  <tr key={p._id} className="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                    <td className="text-xs text-slate-600 font-medium">{formatDateTime(p.createdAt)}</td>
+                    <td className="font-mono font-bold text-xs text-emerald-700">
                       {p.reservationId?.confirmationCode || "—"}
                     </td>
                     <td>
-                      <div className="font-bold text-sm text-base-content">
+                      <div className="font-bold text-sm text-slate-900">
                         {p.guestId ? `${p.guestId.firstName} ${p.guestId.lastName}` : "Guest"}
                       </div>
                       {p.guestId?.email && (
-                        <div className="text-[11px] text-base-content/60">{p.guestId.email}</div>
+                        <div className="text-[11px] text-slate-500 truncate">{p.guestId.email}</div>
                       )}
                     </td>
-                    <td className="text-xs capitalize">{p.method?.replace("_", " ")}</td>
-                    <td className="font-mono text-[11px] text-base-content/60">
+                    <td className="text-xs capitalize font-medium text-slate-700">{p.method?.replace("_", " ")}</td>
+                    <td className="font-mono text-[11px] text-slate-500">
                       {p.transactionReference || "—"}
                     </td>
                     <td>
                       <PaymentStatusBadge status={p.status} />
                     </td>
-                    <td className="text-right font-bold text-sm text-emerald-600 font-mono">
+                    <td className="text-right font-black text-xs text-emerald-700 font-mono">
                       {formatCurrency(p.amount)}
                     </td>
                   </tr>
@@ -152,13 +171,14 @@ export default function PaymentsPage() {
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="p-4 border-t border-base-200 flex items-center justify-between text-xs text-base-content/70">
-            <div>Showing {payments.length} of {pagination.total} records</div>
+          <div className="p-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50">
+            <div>Showing <span className="font-bold">{payments.length}</span> of <span className="font-bold">{pagination.total}</span> records</div>
             <div className="join">
               <button
                 disabled={pagination.page <= 1}
                 onClick={() => fetchPayments(pagination.page - 1)}
-                className="btn btn-outline btn-xs join-item"
+                className="btn btn-outline btn-xs join-item rounded-l-md"
+                aria-label="Previous page"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
@@ -168,7 +188,8 @@ export default function PaymentsPage() {
               <button
                 disabled={pagination.page >= pagination.totalPages}
                 onClick={() => fetchPayments(pagination.page + 1)}
-                className="btn btn-outline btn-xs join-item"
+                className="btn btn-outline btn-xs join-item rounded-r-md"
+                aria-label="Next page"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>

@@ -1,89 +1,93 @@
 import React from "react";
-import { Zap, Droplets, ArrowRightLeft, CornerDownLeft, Tent, ShieldCheck } from "lucide-react";
-import { ElectricHookup, RigType } from "@/lib/constants";
+import { Zap, Droplets, ArrowDownToLine, Flame, Tent, Truck } from "lucide-react";
 
 interface HookupIconsProps {
   hookups?: {
-    electric?: ElectricHookup | string;
+    electric?: string;
     water?: boolean;
     sewer?: boolean;
   };
-  rigType?: RigType | string;
+  rigType?: string;
   maxRigLength?: number;
   compact?: boolean;
 }
 
 export function HookupIcons({ hookups, rigType, maxRigLength, compact = false }: HookupIconsProps) {
+  const electric = hookups?.electric || "30A";
+  const water = hookups?.water ?? true;
+  const sewer = hookups?.sewer ?? true;
+
+  if (compact) {
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        {electric && (
+          <span
+            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-200"
+            title={`Electric: ${electric}`}
+          >
+            <Zap className="w-2.5 h-2.5 text-amber-600" />
+            {electric}
+          </span>
+        )}
+        {water && (
+          <span
+            className="inline-flex items-center px-1 py-0.5 rounded text-[10px] bg-sky-50 text-sky-800 border border-sky-200"
+            title="City Water Hookup"
+          >
+            <Droplets className="w-2.5 h-2.5 text-sky-600" />
+          </span>
+        )}
+        {sewer && (
+          <span
+            className="inline-flex items-center px-1 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200"
+            title="Sewer Hookup"
+          >
+            <ArrowDownToLine className="w-2.5 h-2.5 text-emerald-600" />
+          </span>
+        )}
+        {maxRigLength ? (
+          <span
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200"
+            title={`Max rig length: ${maxRigLength}ft`}
+          >
+            {maxRigLength}ft
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex flex-wrap items-center gap-1.5 ${compact ? "text-xs" : "text-xs"}`}>
-      {/* Electric */}
-      {hookups?.electric && hookups.electric !== "none" && (
-        <span
-          className="badge badge-sm badge-outline gap-1 font-semibold border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30"
-          title={`${hookups.electric} Electric Service`}
-        >
-          <Zap className="w-3 h-3 text-amber-500" />
-          {hookups.electric}
+    <div className="flex flex-wrap items-center gap-1.5">
+      {electric && (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-bold bg-amber-50 text-amber-900 border border-amber-200">
+          <Zap className="w-3 h-3 text-amber-600" />
+          {electric}
         </span>
       )}
-
-      {/* Water */}
-      {hookups?.water && (
-        <span
-          className="badge badge-sm badge-outline gap-1 font-semibold border-blue-500/40 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/30"
-          title="Potable Water Hookup"
-        >
-          <Droplets className="w-3 h-3 text-blue-500" />
+      {water && (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-sky-50 text-sky-800 border border-sky-200">
+          <Droplets className="w-3 h-3 text-sky-600" />
           Water
         </span>
       )}
-
-      {/* Sewer */}
-      {hookups?.sewer && (
-        <span
-          className="badge badge-sm badge-outline gap-1 font-semibold border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30"
-          title="Direct Sewer Hookup"
-        >
-          <ShieldCheck className="w-3 h-3 text-emerald-500" />
+      {sewer && (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+          <ArrowDownToLine className="w-3 h-3 text-emerald-600" />
           Sewer
         </span>
       )}
-
-      {/* Rig Type */}
-      {rigType === "pull_through" && (
-        <span
-          className="badge badge-sm badge-ghost gap-1 text-slate-600 dark:text-slate-300 font-medium"
-          title="Pull-Through Access"
-        >
-          <ArrowRightLeft className="w-3 h-3 text-primary" />
-          Pull-Thru
+      {rigType && (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 capitalize">
+          <Truck className="w-3 h-3 text-slate-600" />
+          {rigType.replace("_", " ")}
         </span>
       )}
-      {rigType === "back_in" && (
-        <span
-          className="badge badge-sm badge-ghost gap-1 text-slate-600 dark:text-slate-300 font-medium"
-          title="Back-In Access"
-        >
-          <CornerDownLeft className="w-3 h-3 text-slate-500" />
-          Back-In
+      {maxRigLength ? (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+          Max {maxRigLength} ft
         </span>
-      )}
-      {rigType === "tent" && (
-        <span
-          className="badge badge-sm badge-ghost gap-1 text-slate-600 dark:text-slate-300 font-medium"
-          title="Tent / Pop-Up Site"
-        >
-          <Tent className="w-3 h-3 text-amber-600" />
-          Tent
-        </span>
-      )}
-
-      {/* Max Length */}
-      {maxRigLength !== undefined && maxRigLength > 0 && (
-        <span className="badge badge-sm badge-ghost text-slate-500 font-mono text-[11px]">
-          Max {maxRigLength}ft
-        </span>
-      )}
+      ) : null}
     </div>
   );
 }

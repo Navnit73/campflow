@@ -1,47 +1,142 @@
 import React from "react";
-import { ReservationStatus } from "@/lib/constants";
 
-export function ReservationBadge({ status }: { status: ReservationStatus | string }) {
+interface BadgeProps {
+  status: string;
+  className?: string;
+}
+
+export function ReservationBadge({ status, className = "" }: BadgeProps) {
   switch (status) {
     case "confirmed":
-      return <span className="badge badge-success badge-sm font-medium gap-1 text-white">Confirmed</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 ${className}`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+          Confirmed
+        </span>
+      );
     case "checked_in":
-      return <span className="badge badge-info badge-sm font-medium gap-1 text-white">Checked In</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-sky-50 text-sky-800 border border-sky-200 ${className}`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-600"></span>
+          Checked In
+        </span>
+      );
     case "checked_out":
-      return <span className="badge badge-neutral badge-sm font-medium gap-1 text-gray-300">Checked Out</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 ${className}`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+          Checked Out
+        </span>
+      );
     case "pending":
-      return <span className="badge badge-warning badge-sm font-medium gap-1 text-black">Pending</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 ${className}`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+          Pending
+        </span>
+      );
     case "cancelled":
-      return <span className="badge badge-error badge-sm font-medium gap-1 text-white">Cancelled</span>;
-    case "no_show":
-      return <span className="badge badge-ghost badge-sm font-medium gap-1 text-gray-500">No Show</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 ${className}`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+          Cancelled
+        </span>
+      );
     default:
-      return <span className="badge badge-ghost badge-sm">{status}</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 capitalize ${className}`}
+        >
+          {status}
+        </span>
+      );
   }
 }
 
-export function SiteStatusBadge({ status }: { status: "available" | "maintenance" | "inactive" | string }) {
+export function SiteStatusBadge({ status, className = "" }: BadgeProps) {
   switch (status) {
     case "available":
-      return <span className="badge badge-outline badge-success badge-sm font-medium">Available</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 ${className}`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+          Available
+        </span>
+      );
     case "maintenance":
-      return <span className="badge badge-outline badge-warning badge-sm font-medium">Maintenance</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 ${className}`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+          Maintenance
+        </span>
+      );
     case "inactive":
-      return <span className="badge badge-outline badge-error badge-sm font-medium">Inactive</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 ${className}`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+          Inactive
+        </span>
+      );
     default:
-      return <span className="badge badge-outline badge-sm">{status}</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 capitalize ${className}`}
+        >
+          {status}
+        </span>
+      );
   }
 }
 
-export function PaymentStatusBadge({ status }: { status: string }) {
+export function PaymentStatusBadge({ status, className = "" }: BadgeProps) {
   switch (status) {
     case "completed":
-      return <span className="badge badge-success badge-xs font-semibold text-white">Paid</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 ${className}`}
+        >
+          Paid
+        </span>
+      );
     case "pending":
-      return <span className="badge badge-warning badge-xs font-semibold">Pending</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 ${className}`}
+        >
+          Pending
+        </span>
+      );
+    case "failed":
     case "refunded":
-      return <span className="badge badge-neutral badge-xs font-semibold">Refunded</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 capitalize ${className}`}
+        >
+          {status}
+        </span>
+      );
     default:
-      return <span className="badge badge-ghost badge-xs">{status}</span>;
+      return (
+        <span
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 capitalize ${className}`}
+        >
+          {status}
+        </span>
+      );
   }
 }

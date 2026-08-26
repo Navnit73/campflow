@@ -71,18 +71,18 @@ export function PaymentModal({ reservation, isOpen, onClose, onSuccess }: Paymen
       subtitle={`Guest: ${reservation.guestSnapshot?.fullName || "Guest"}`}
       maxWidth="max-w-md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="p-3 rounded-xl bg-base-200/60 flex items-center justify-between text-sm">
-          <span className="text-base-content/70">Current Balance Due:</span>
-          <span className="font-bold text-base text-error">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
+        <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between text-sm">
+          <span className="text-slate-600 font-medium text-xs">Current Balance Due:</span>
+          <span className="font-black text-sm text-rose-700 font-mono">
             {formatCurrency(reservation.pricing?.balanceDue)}
           </span>
         </div>
 
         <div>
-          <label className="label text-xs font-semibold py-1">Payment Amount ($)</label>
+          <label className="label text-xs font-bold text-slate-700 py-0.5">Payment Amount ($)</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/60 font-bold">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">$</span>
             <input
               type="number"
               step="0.01"
@@ -90,18 +90,18 @@ export function PaymentModal({ reservation, isOpen, onClose, onSuccess }: Paymen
               max="10000"
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
-              className="input input-bordered input-sm w-full pl-8 font-bold font-mono"
+              className="input input-bordered input-sm w-full pl-7 font-bold font-mono text-emerald-700 text-sm rounded-md"
               required
             />
           </div>
         </div>
 
         <div>
-          <label className="label text-xs font-semibold py-1">Payment Method</label>
+          <label className="label text-xs font-bold text-slate-700 py-0.5">Payment Method</label>
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value)}
-            className="select select-bordered select-sm w-full font-medium"
+            className="select select-bordered select-sm w-full font-medium bg-white rounded-md"
           >
             <option value="credit_card">Credit Card (Terminal / POS)</option>
             <option value="cash">Cash</option>
@@ -112,32 +112,32 @@ export function PaymentModal({ reservation, isOpen, onClose, onSuccess }: Paymen
         </div>
 
         <div>
-          <label className="label text-xs font-semibold py-1">Transaction Ref / Check # (optional)</label>
+          <label className="label text-xs font-bold text-slate-700 py-0.5">Transaction Ref / Check # (optional)</label>
           <input
             type="text"
             placeholder="e.g. AUTH-9284 / Check #1042"
             value={transactionReference}
             onChange={(e) => setTransactionReference(e.target.value)}
-            className="input input-bordered input-sm w-full"
+            className="input input-bordered input-sm w-full font-mono text-xs rounded-md"
           />
         </div>
 
         <div>
-          <label className="label text-xs font-semibold py-1">Notes</label>
+          <label className="label text-xs font-bold text-slate-700 py-0.5">Payment Notes</label>
           <input
             type="text"
             placeholder="e.g. Deposit collected at desk"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="input input-bordered input-sm w-full"
+            className="input input-bordered input-sm w-full rounded-md"
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-3">
-          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm">
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm font-semibold rounded-md">
             Cancel
           </button>
-          <button type="submit" disabled={loading} className="btn btn-primary btn-sm min-w-[130px] shadow-sm">
+          <button type="submit" disabled={loading} className="btn btn-primary btn-sm min-w-[130px] font-bold rounded-md">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Record Payment"}
           </button>
         </div>

@@ -55,7 +55,7 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) {
-      error("Site Type name is required");
+      error("Site Category name is required");
       return;
     }
 
@@ -74,20 +74,20 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
       if (typeToEdit) {
         const res = await apiClient.patch(`/api/sites/types/${typeToEdit._id}`, payload);
         if (res.data?.success) {
-          success(`Site type "${name}" updated!`);
+          success(`Site category "${name}" updated!`);
           onSuccess();
           onClose();
         }
       } else {
         const res = await apiClient.post("/api/sites/types", payload);
         if (res.data?.success) {
-          success(`Site type "${name}" created!`);
+          success(`Site category "${name}" created!`);
           onSuccess();
           onClose();
         }
       }
     } catch (err: any) {
-      error(err?.message || "Failed to save site type");
+      error(err?.message || "Failed to save site category");
     } finally {
       setLoading(false);
     }
@@ -97,30 +97,30 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={typeToEdit ? `Edit "${typeToEdit.name}"` : "Add New Site Type Category"}
+      title={typeToEdit ? `Edit "${typeToEdit.name}"` : "Add New Site Category"}
       subtitle="Define default rates, hookups, and maximum rig clearance"
       maxWidth="max-w-xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
         <div>
-          <label className="label text-xs font-semibold py-1">Type Name</label>
+          <label className="label text-xs font-bold text-slate-700 py-0.5">Category Name</label>
           <input
             type="text"
             placeholder="e.g. 50A Full Hookup Pull-Through"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="input input-bordered input-sm w-full font-medium"
+            className="input input-bordered input-sm w-full font-semibold rounded-md"
             required
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="label text-xs font-semibold py-1">Category</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Category Type</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="select select-bordered select-sm w-full capitalize"
+              className="select select-bordered select-sm w-full capitalize rounded-md"
             >
               {SITE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -131,31 +131,31 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
           </div>
 
           <div>
-            <label className="label text-xs font-semibold py-1">Default Base Rate ($/nt)</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Default Base Rate ($/nt)</label>
             <input
               type="number"
               min={0}
               step="1"
               value={defaultBaseRate}
               onChange={(e) => setDefaultBaseRate(Number(e.target.value))}
-              className="input input-bordered input-sm w-full font-mono font-bold"
+              className="input input-bordered input-sm w-full font-mono font-bold text-emerald-700 rounded-md"
               required
             />
           </div>
         </div>
 
         {/* Hookups Checklist */}
-        <div className="p-3 rounded-xl bg-base-200/50 border border-base-200 space-y-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-base-content/70">
+        <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5">
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
             Hookup Specifications
           </label>
-          <div className="grid grid-cols-3 gap-3 pt-1">
+          <div className="grid grid-cols-3 gap-2.5 pt-0.5">
             <div>
-              <label className="label text-[11px] font-semibold py-0">Electric</label>
+              <label className="label text-[11px] font-bold text-slate-600 py-0">Electric</label>
               <select
                 value={electric}
                 onChange={(e) => setElectric(e.target.value)}
-                className="select select-bordered select-xs w-full"
+                className="select select-bordered select-xs w-full font-medium rounded-md"
               >
                 {ELECTRIC_HOOKUPS.map((h) => (
                   <option key={h} value={h}>
@@ -165,75 +165,75 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
               </select>
             </div>
 
-            <div className="flex items-center pt-4">
-              <label className="cursor-pointer label gap-2 py-0">
+            <div className="flex items-center pt-3">
+              <label className="cursor-pointer label gap-1.5 py-0">
                 <input
                   type="checkbox"
                   checked={water}
                   onChange={(e) => setWater(e.target.checked)}
-                  className="checkbox checkbox-primary checkbox-xs"
+                  className="checkbox checkbox-primary checkbox-xs rounded"
                 />
-                <span className="label-text text-xs font-medium">Water</span>
+                <span className="label-text text-xs font-bold text-slate-700">Water</span>
               </label>
             </div>
 
-            <div className="flex items-center pt-4">
-              <label className="cursor-pointer label gap-2 py-0">
+            <div className="flex items-center pt-3">
+              <label className="cursor-pointer label gap-1.5 py-0">
                 <input
                   type="checkbox"
                   checked={sewer}
                   onChange={(e) => setSewer(e.target.checked)}
-                  className="checkbox checkbox-primary checkbox-xs"
+                  className="checkbox checkbox-primary checkbox-xs rounded"
                 />
-                <span className="label-text text-xs font-medium">Sewer</span>
+                <span className="label-text text-xs font-bold text-slate-700">Sewer</span>
               </label>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="label text-xs font-semibold py-1">Max Rig Length (ft)</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Max Rig Length (ft)</label>
             <input
               type="number"
               min={0}
               max={65}
               value={maxRigLength}
               onChange={(e) => setMaxRigLength(Number(e.target.value))}
-              className="input input-bordered input-sm w-full font-mono"
+              className="input input-bordered input-sm w-full font-mono rounded-md"
             />
           </div>
 
           <div>
-            <label className="label text-xs font-semibold py-1">Max Occupancy (guests)</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Max Occupancy (guests)</label>
             <input
               type="number"
               min={1}
               max={15}
               value={maxOccupancy}
               onChange={(e) => setMaxOccupancy(Number(e.target.value))}
-              className="input input-bordered input-sm w-full"
+              className="input input-bordered input-sm w-full rounded-md"
             />
           </div>
         </div>
 
         <div>
-          <label className="label text-xs font-semibold py-1">Description</label>
+          <label className="label text-xs font-bold text-slate-700 py-0.5">Description</label>
           <textarea
             placeholder="Describe site features, pad dimensions, and views..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="textarea textarea-bordered textarea-sm w-full"
+            className="textarea textarea-bordered textarea-sm w-full rounded-md"
             rows={2}
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm">
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm font-semibold rounded-md">
             Cancel
           </button>
-          <button type="submit" disabled={loading} className="btn btn-primary btn-sm min-w-[130px] shadow-sm">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : typeToEdit ? "Update Type" : "Create Type"}
+          <button type="submit" disabled={loading} className="btn btn-primary btn-sm min-w-[130px] font-bold rounded-md">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : typeToEdit ? "Update Category" : "Create Category"}
           </button>
         </div>
       </form>

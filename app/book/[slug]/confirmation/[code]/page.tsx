@@ -2,30 +2,31 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import apiClient from "@/lib/axios/client";
 import { HookupIcons } from "@/components/ui/HookupIcons";
 import { formatCurrency, formatDate, formatRvType } from "@/lib/utils/format";
+import Link from "next/link";
 import {
-  CheckCircle2,
   Trees,
-  Printer,
-  MapPin,
+  CheckCircle2,
   Calendar,
-  Truck,
-  ShieldCheck,
+  MapPin,
+  Clock,
+  Printer,
   Phone,
   Mail,
-  RefreshCw,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
-export default function BookingConfirmationPage() {
+export default function ConfirmationPage() {
   const params = useParams();
-  const slug = params?.slug as string;
-  const code = params?.code as string;
+  const slug = (params?.slug as string) || "campflow-rv-resort";
+  const code = (params?.code as string) || "";
 
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     if (code) {
@@ -34,10 +35,16 @@ export default function BookingConfirmationPage() {
         .then((res) => {
           if (res.data?.success) {
             setData(res.data.data);
+          } else {
+            setErrorMsg("Reservation details not found.");
           }
         })
-        .catch(() => {})
-        .finally(() => setLoading(false));
+        .catch((err) => {
+          setErrorMsg(err?.message || "Failed to load booking confirmation");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   }, [code]);
 
@@ -47,176 +54,169 @@ export default function BookingConfirmationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6 space-y-3">
-        <RefreshCw className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-sm font-semibold text-base-content/70">
-          Loading your confirmation pass...
-        </p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="surface-card p-8 rounded-lg text-center space-y-3 max-w-sm w-full border border-slate-200">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-600" />
+          <p className="text-sm font-semibold text-slate-700">Loading your reservation pass...</p>
+        </div>
       </div>
     );
   }
 
-  if (!data || !data.reservation) {
+  if (errorMsg || !data) {
     return (
-      <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6 text-center space-y-4">
-        <h2 className="text-xl font-bold">Confirmation Not Found</h2>
-        <p className="text-sm text-base-content/70">
-          Could not locate a booking with confirmation code &quot;{code}&quot;.
-        </p>
-        <Link href={`/book/${slug}`} className="btn btn-primary btn-sm">
-          Return to Booking Page
-        </Link>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="surface-card p-8 rounded-lg text-center space-y-3 max-w-sm w-full border border-slate-200">
+          <AlertCircle className="w-8 h-8 mx-auto text-rose-600" />
+          <h2 className="text-base font-bold text-slate-900">Reservation Not Found</h2>
+          <p className="text-xs text-slate-500">{errorMsg || "Invalid confirmation code"}</p>
+          <Link href={`/book/${slug}`} className="btn btn-primary btn-sm font-bold rounded-md">
+            Return to Booking Page
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const { reservation: res, property: prop, site, guest } = data;
+  const { reservation, property } = data;
 
   return (
-    <div className="min-h-screen bg-base-200/40 text-base-content p-4 sm:p-8 flex flex-col justify-between">
-      <div className="max-w-3xl w-full mx-auto space-y-6">
-        {/* Top Header Card */}
-        <div className="card bg-base-100 shadow-xl border border-base-200 p-6 sm:p-8 text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
-            <CheckCircle2 className="w-10 h-10" />
+    <div className="min-h-screen bg-slate-50 text-slate-900 py-8 px-4">
+      <div className="max-w-2xl mx-auto space-y-5">
+        {/* Top Banner */}
+        <div className="surface-card p-5 sm:p-6 rounded-lg text-center space-y-2 border border-slate-200">
+          <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+            Booking Confirmed!
+          </h1>
+          <p className="text-xs text-slate-600 max-w-md mx-auto">
+            We have confirmed your reservation at <strong className="text-slate-900">{property?.name}</strong>. A confirmation pass has been recorded for your arrival.
+          </p>
 
-          <div>
-            <span className="badge badge-success badge-sm font-bold text-white uppercase tracking-wider mb-2">
-              Booking Confirmed & Paid
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-base-content">
-              You&apos;re All Set for Camping!
-            </h1>
-            <p className="text-xs sm:text-sm text-base-content/70 mt-1">
-              Thank you for booking with {prop?.name || "our campground"}. A confirmation receipt has been sent to{" "}
-              <strong className="text-base-content">{guest?.email}</strong>.
-            </p>
-          </div>
-
-          {/* Confirmation Code Banner */}
-          <div className="p-4 rounded-xl bg-base-200/70 border border-base-300 max-w-sm mx-auto">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-base-content/60">
-              Confirmation Code
+          <div className="pt-2">
+            <div className="inline-block p-3 rounded-md bg-emerald-50 border border-emerald-200">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-800 block">
+                Confirmation Code
+              </span>
+              <span className="text-2xl sm:text-3xl font-black font-mono tracking-wider text-emerald-800">
+                {reservation.confirmationCode}
+              </span>
             </div>
-            <div className="text-2xl sm:text-3xl font-black font-mono tracking-widest text-primary mt-0.5">
-              {res.confirmationCode}
-            </div>
-          </div>
-
-          <div className="flex justify-center gap-3 pt-2">
-            <button
-              onClick={handlePrint}
-              className="btn btn-outline btn-sm gap-2 font-semibold"
-            >
-              <Printer className="w-4 h-4" />
-              Print Confirmation Pass
-            </button>
           </div>
         </div>
 
         {/* Stay & Site Details Card */}
-        <div className="card bg-base-100 shadow-md border border-base-200 p-6 space-y-6">
-          <h3 className="font-bold text-base text-base-content border-b border-base-200 pb-3">
-            Reservation Details
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Site Info */}
-            <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                Assigned Site
-              </span>
-              <div className="p-4 rounded-xl bg-base-200/50 border border-base-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-lg font-mono text-base-content">
-                    Site {res.siteSnapshot?.siteNumber}
-                  </span>
-                  <span className="badge badge-sm badge-outline">
-                    {res.siteSnapshot?.rigType?.replace("_", " ")}
-                  </span>
-                </div>
-                <div className="text-xs text-base-content/70">
-                  {res.siteSnapshot?.siteTypeName}
-                </div>
-                <div className="pt-1">
-                  <HookupIcons hookups={res.siteSnapshot?.hookups} compact />
-                </div>
-              </div>
-            </div>
-
-            {/* Dates */}
-            <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                Check-In & Out Schedule
-              </span>
-              <div className="p-4 rounded-xl bg-base-200/50 border border-base-200 space-y-3 text-xs">
-                <div>
-                  <span className="text-base-content/60 font-medium">Check-In: </span>
-                  <span className="font-bold text-base-content">
-                    {formatDate(res.checkInDate)} (After 1:00 PM)
-                  </span>
-                </div>
-                <div>
-                  <span className="text-base-content/60 font-medium">Check-Out: </span>
-                  <span className="font-bold text-base-content">
-                    {formatDate(res.checkOutDate)} (Before 11:00 AM)
-                  </span>
-                </div>
-                <div className="pt-1 border-t border-base-200 font-semibold text-base-content/80">
-                  Stay: {res.numNights} Nights • {res.adults} Adults, {res.children} Children
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment & Billing */}
-          <div className="p-4 rounded-xl border border-base-200 bg-base-100 flex items-center justify-between text-sm">
+        <div className="surface-card p-5 sm:p-6 rounded-lg space-y-4 border border-slate-200">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-              <div className="font-bold text-base-content">Total Paid: {formatCurrency(res.pricing?.paidAmount)}</div>
-              <div className="text-[11px] text-base-content/60">
-                Paid in full via online checkout
-              </div>
+              <span className="text-xs text-slate-500 font-semibold">Assigned Site:</span>
+              <h2 className="text-lg font-black font-mono text-slate-900">
+                Site {reservation.siteSnapshot?.siteNumber}
+              </h2>
             </div>
-            <div className="badge badge-success text-white font-bold gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Paid
+            <div className="text-right">
+              <span className="text-xs text-slate-500 font-semibold">Category:</span>
+              <div className="text-xs font-bold text-slate-800">
+                {reservation.siteSnapshot?.siteTypeName}
+              </div>
             </div>
           </div>
 
-          {/* Park Address & Rules */}
-          {prop && (
-            <div className="p-4 rounded-xl bg-base-200/40 border border-base-200 text-xs space-y-3">
-              <div className="flex items-center gap-2 font-bold text-base-content">
-                <MapPin className="w-4 h-4 text-emerald-600" />
-                Park Location & Contact
+          {/* Schedule Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                Check-In Date
               </div>
-              <p className="text-base-content/80">
-                {prop.address?.street}, {prop.address?.city}, {prop.address?.state} {prop.address?.zip}
-              </p>
-              <div className="flex flex-wrap gap-4 text-base-content/70">
-                <span>Phone: {prop.phone}</span>
-                <span>Email: {prop.email}</span>
+              <div className="text-sm font-bold text-slate-900">{formatDate(reservation.checkInDate)}</div>
+              <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-slate-400" /> After 1:00 PM
               </div>
-
-              {prop.rules && prop.rules.length > 0 && (
-                <div className="pt-2 border-t border-base-200 space-y-1">
-                  <span className="font-bold text-base-content">Important Park Rules:</span>
-                  <ul className="list-disc list-inside space-y-0.5 text-base-content/70 pl-1">
-                    {prop.rules.slice(0, 3).map((r: string, idx: number) => (
-                      <li key={idx}>{r}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
-          )}
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                Check-Out Date
+              </div>
+              <div className="text-sm font-bold text-slate-900">{formatDate(reservation.checkOutDate)}</div>
+              <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-slate-400" /> Before 11:00 AM
+              </div>
+            </div>
+          </div>
+
+          {/* Hookups */}
+          <div>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+              Hookups at your site:
+            </span>
+            <HookupIcons
+              hookups={reservation.siteSnapshot?.hookups}
+              rigType={reservation.guestSnapshot?.rvType}
+              maxRigLength={reservation.siteSnapshot?.maxRigLength}
+            />
+          </div>
+
+          {/* Guest & Payment Summary */}
+          <div className="border-t border-slate-100 pt-3 space-y-1.5 text-xs text-slate-700">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Primary Guest:</span>
+              <span className="font-bold text-slate-900">{reservation.guestSnapshot?.fullName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Email:</span>
+              <span>{reservation.guestSnapshot?.email}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Rig Type:</span>
+              <span>{formatRvType(reservation.guestSnapshot?.rvType || "travel_trailer")}</span>
+            </div>
+            <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-slate-100">
+              <span>Total Paid:</span>
+              <span className="text-emerald-700 font-mono font-black">
+                {formatCurrency(reservation.pricing?.paidAmount || reservation.pricing?.totalAmount)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Park Location & Rules Card */}
+        <div className="surface-card p-4 sm:p-5 rounded-lg space-y-2 text-xs text-slate-600 border border-slate-200">
+          <div className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+            <MapPin className="w-4 h-4 text-emerald-600" />
+            Park Location & Important Information
+          </div>
+          <p>
+            {property?.name} • {property?.address?.street || "100 Pine Creek Rd"}, {property?.address?.city || "Mountain View"}, {property?.address?.state || "CO"} {property?.address?.zip || "80401"}
+          </p>
+          <div className="pt-1 text-slate-500 space-y-0.5">
+            <p>• Quiet hours are strictly enforced between 10:00 PM and 7:00 AM.</p>
+            <p>• Please keep pets on a 6-foot leash at all times.</p>
+            <p>• Speed limit within campground is 5 MPH.</p>
+          </div>
+        </div>
+
+        {/* Print & Return Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 no-print">
+          <Link
+            href={`/book/${slug}`}
+            className="btn btn-outline btn-sm font-bold text-xs text-slate-700 rounded-md"
+          >
+            ← Book Another Site
+          </Link>
+          <button
+            onClick={handlePrint}
+            className="btn btn-primary btn-sm gap-1.5 font-bold text-xs rounded-md"
+          >
+            <Printer className="w-4 h-4" />
+            Print Confirmation Pass
+          </button>
         </div>
       </div>
-
-      <footer className="text-center text-xs text-base-content/50 py-6">
-        © {new Date().getFullYear()} {prop?.name || "Campground"}. Powered by CampFlow SaaS.
-      </footer>
     </div>
   );
 }

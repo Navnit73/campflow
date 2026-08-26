@@ -63,7 +63,7 @@ export function SiteFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!siteNumber || !siteTypeId) {
-      error("Site number and Site type are required");
+      error("Site number and Site category are required");
       return;
     }
 
@@ -112,26 +112,26 @@ export function SiteFormModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={siteToEdit ? `Edit Site ${siteToEdit.siteNumber}` : "Add New Site"}
+      title={siteToEdit ? `Edit Site ${siteToEdit.siteNumber}` : "Add New Campground Site"}
       subtitle="Configure site dimensions, hookups, and surface type"
       maxWidth="max-w-2xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="label text-xs font-semibold py-1">Site Number / ID</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Site Number / ID</label>
             <input
               type="text"
               placeholder="e.g. A-01, Site 12"
               value={siteNumber}
               onChange={(e) => setSiteNumber(e.target.value)}
-              className="input input-bordered input-sm w-full font-mono font-bold"
+              className="input input-bordered input-sm w-full font-mono font-bold rounded-md"
               required
             />
           </div>
 
           <div>
-            <label className="label text-xs font-semibold py-1">Site Type Category</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Site Category</label>
             <select
               value={siteTypeId}
               onChange={(e) => {
@@ -141,10 +141,10 @@ export function SiteFormModal({
                   setCurrentBaseRate(st.defaultBaseRate);
                 }
               }}
-              className="select select-bordered select-sm w-full font-medium"
+              className="select select-bordered select-sm w-full font-medium rounded-md"
               required
             >
-              <option value="" disabled>Select Type</option>
+              <option value="" disabled>Select Category</option>
               {siteTypes.map((st) => (
                 <option key={st._id} value={st._id}>
                   {st.name} (${st.defaultBaseRate}/nt)
@@ -154,26 +154,26 @@ export function SiteFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="label text-xs font-semibold py-1">Nightly Rate ($)</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Nightly Rate ($)</label>
             <input
               type="number"
               min={0}
               step="1"
               value={currentBaseRate}
               onChange={(e) => setCurrentBaseRate(Number(e.target.value))}
-              className="input input-bordered input-sm w-full font-bold font-mono"
+              className="input input-bordered input-sm w-full font-bold font-mono text-emerald-700 rounded-md"
               required
             />
           </div>
 
           <div>
-            <label className="label text-xs font-semibold py-1">Rig Access Type</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Rig Access Type</label>
             <select
               value={rigType}
               onChange={(e) => setRigType(e.target.value)}
-              className="select select-bordered select-sm w-full font-medium"
+              className="select select-bordered select-sm w-full font-medium rounded-md"
             >
               {RIG_TYPES.map((r) => (
                 <option key={r} value={r}>
@@ -184,11 +184,11 @@ export function SiteFormModal({
           </div>
 
           <div>
-            <label className="label text-xs font-semibold py-1">Surface Pad</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Surface Pad</label>
             <select
               value={surfaceType}
               onChange={(e) => setSurfaceType(e.target.value)}
-              className="select select-bordered select-sm w-full capitalize"
+              className="select select-bordered select-sm w-full capitalize rounded-md"
             >
               {SURFACE_TYPES.map((s) => (
                 <option key={s} value={s}>
@@ -199,13 +199,13 @@ export function SiteFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="label text-xs font-semibold py-1">Operational Status</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Operational Status</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="select select-bordered select-sm w-full font-medium"
+              className="select select-bordered select-sm w-full font-medium rounded-md"
             >
               <option value="available">Available for Booking</option>
               <option value="maintenance">Under Maintenance</option>
@@ -214,44 +214,44 @@ export function SiteFormModal({
           </div>
 
           <div>
-            <label className="label text-xs font-semibold py-1">Custom Display Name (optional)</label>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Display Name (optional)</label>
             <input
               type="text"
               placeholder="e.g. Riverfront Deluxe A-01"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="input input-bordered input-sm w-full"
+              className="input input-bordered input-sm w-full rounded-md"
             />
           </div>
         </div>
 
         <div>
-          <label className="label text-xs font-semibold py-1">Amenities (comma-separated)</label>
+          <label className="label text-xs font-bold text-slate-700 py-0.5">Amenities (comma-separated)</label>
           <input
             type="text"
             placeholder="Picnic Table, Fire Pit, Shade, Concrete Pad"
             value={amenitiesStr}
             onChange={(e) => setAmenitiesStr(e.target.value)}
-            className="input input-bordered input-sm w-full"
+            className="input input-bordered input-sm w-full rounded-md"
           />
         </div>
 
         <div>
-          <label className="label text-xs font-semibold py-1">Maintenance / Staff Notes</label>
+          <label className="label text-xs font-bold text-slate-700 py-0.5">Maintenance Notes</label>
           <textarea
             placeholder="Special instructions or notes for site maintenance..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="textarea textarea-bordered textarea-sm w-full"
+            className="textarea textarea-bordered textarea-sm w-full rounded-md"
             rows={2}
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-3">
-          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm">
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm font-semibold rounded-md">
             Cancel
           </button>
-          <button type="submit" disabled={loading} className="btn btn-primary btn-sm min-w-[120px] shadow-sm">
+          <button type="submit" disabled={loading} className="btn btn-primary btn-sm min-w-[120px] font-bold rounded-md">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : siteToEdit ? "Update Site" : "Save Site"}
           </button>
         </div>

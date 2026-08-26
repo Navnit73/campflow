@@ -10,7 +10,6 @@ import { ReservationDetailModal } from "@/components/reservations/ReservationDet
 import { PaymentModal } from "@/components/payments/PaymentModal";
 import { Trees, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -21,12 +20,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg animate-pulse">
-          <Trees className="w-7 h-7" />
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center space-y-3">
+        <div className="w-10 h-10 rounded-md bg-emerald-600 text-white flex items-center justify-center shadow-2xs">
+          <Trees className="w-5 h-5" />
         </div>
-        <div className="flex items-center gap-2 text-sm font-semibold text-base-content/70">
-          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
           Loading CampFlow Dashboard...
         </div>
       </div>
@@ -35,20 +34,20 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md p-8 rounded-2xl border border-base-200 bg-base-50 shadow-sm space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-md">
-            <Trees className="w-6 h-6" />
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full p-6 rounded-lg border border-slate-200 bg-white shadow-xs space-y-4">
+          <div className="w-10 h-10 rounded-md bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-2xs">
+            <Trees className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-bold">Authentication Required</h2>
-          <p className="text-sm text-base-content/70">
+          <h2 className="text-lg font-black tracking-tight text-slate-900">Authentication Required</h2>
+          <p className="text-xs text-slate-500">
             Please sign in to access the campground operations dashboard.
           </p>
-          <div className="flex gap-3 justify-center pt-2">
-            <Link href="/login" className="btn btn-primary btn-sm">
+          <div className="flex gap-2 justify-center pt-1">
+            <Link href="/login" className="btn btn-primary btn-sm font-bold rounded-md">
               Sign In
             </Link>
-            <Link href="/register" className="btn btn-outline btn-sm">
+            <Link href="/register" className="btn btn-outline btn-sm font-bold rounded-md">
               Register Park
             </Link>
           </div>
@@ -58,7 +57,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="drawer lg:drawer-open min-h-screen bg-base-200/30">
+    <div className="drawer lg:drawer-open min-h-screen bg-slate-50">
       <input id="dashboard-drawer" type="checkbox" className="drawer-toggle" />
       <div className="drawer-content flex flex-col min-h-screen">
         <DashboardNavbar

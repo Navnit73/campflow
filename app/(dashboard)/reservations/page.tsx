@@ -13,11 +13,12 @@ import {
   PlusCircle,
   RefreshCw,
   Calendar,
-  Filter,
   CheckCircle2,
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Inbox,
+  Filter,
 } from "lucide-react";
 
 export default function ReservationsPage() {
@@ -76,7 +77,7 @@ export default function ReservationsPage() {
     try {
       const res = await apiClient.post(`/api/reservations/${resId}/check-in`);
       if (res.data?.success) {
-        success("Guest checked in!");
+        success("Guest checked in successfully!");
         fetchReservations(pagination.page);
       }
     } catch (err: any) {
@@ -94,7 +95,7 @@ export default function ReservationsPage() {
     try {
       const resp = await apiClient.post(`/api/reservations/${res._id}/check-out`);
       if (resp.data?.success) {
-        success("Guest checked out!");
+        success("Guest checked out successfully!");
         fetchReservations(pagination.page);
       }
     } catch (err: any) {
@@ -116,10 +117,10 @@ export default function ReservationsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-base-content">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
             Reservations
           </h1>
-          <p className="text-xs text-base-content/60 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Manage campground bookings, check-in guests, and inspect folios
           </p>
         </div>
@@ -127,70 +128,77 @@ export default function ReservationsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsNewBookingOpen(true)}
-            className="btn btn-primary btn-sm gap-1.5 font-medium shadow-xs"
+            className="btn btn-primary btn-sm gap-1.5 font-bold rounded-md"
           >
             <PlusCircle className="w-4 h-4" />
             New Booking
           </button>
           <button
             onClick={() => fetchReservations(pagination.page)}
-            className="btn btn-ghost btn-sm btn-circle"
+            className="btn btn-ghost btn-sm btn-circle text-slate-600 hover:text-slate-900 rounded-md"
             title="Refresh List"
+            aria-label="Refresh List"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-emerald-600" : ""}`} />
           </button>
         </div>
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="card bg-base-100 shadow-sm border border-base-200 p-4 space-y-4">
+      <div className="surface-card p-3.5 sm:p-4 rounded-lg space-y-3.5 border border-slate-200">
         {/* Status Tabs */}
-        <div className="flex flex-wrap items-center gap-1 border-b border-base-200 pb-3">
-          {statuses.map((s) => (
-            <button
-              key={s.value}
-              onClick={() => setStatusFilter(s.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                statusFilter === s.value
-                  ? "bg-primary text-primary-content shadow-xs"
-                  : "text-base-content/70 hover:bg-base-200"
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-100 pb-2.5">
+          {statuses.map((s) => {
+            const isSelected = statusFilter === s.value;
+            return (
+              <button
+                key={s.value}
+                onClick={() => setStatusFilter(s.value)}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                  isSelected
+                    ? "bg-emerald-600 text-white"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                {s.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Search & Dates Row */}
-        <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center justify-between gap-3">
+        <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex-1 min-w-[240px] relative">
-            <Search className="w-4 h-4 text-base-content/50 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search by Guest Name, Confirmation Code, Phone, or Site..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input input-bordered input-sm w-full pl-9"
+              className="input input-bordered input-sm w-full pl-9 text-xs sm:text-sm bg-white rounded-md"
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="input input-bordered input-sm text-xs"
-              title="Filter from Check-in Date"
-            />
-            <span className="text-xs text-base-content/50">to</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="input input-bordered input-sm text-xs"
-              title="Filter to Check-in Date"
-            />
-            <button type="submit" className="btn btn-outline btn-sm font-semibold">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="input input-bordered input-sm text-xs bg-white rounded-md"
+                title="Filter from Check-in Date"
+              />
+              <span className="text-xs text-slate-400">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="input input-bordered input-sm text-xs bg-white rounded-md"
+                title="Filter to Check-in Date"
+              />
+            </div>
+            <button type="submit" className="btn btn-outline btn-sm font-bold text-xs rounded-md">
+              <Filter className="w-3.5 h-3.5" />
               Filter
             </button>
             {(searchTerm || startDate || endDate) && (
@@ -201,7 +209,7 @@ export default function ReservationsPage() {
                   setStartDate("");
                   setEndDate("");
                 }}
-                className="btn btn-ghost btn-sm text-xs"
+                className="btn btn-ghost btn-sm text-xs font-semibold rounded-md"
               >
                 Reset
               </button>
@@ -210,36 +218,40 @@ export default function ReservationsPage() {
         </form>
       </div>
 
-      {/* Reservations Compact Data Table */}
-      <div className="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table table-sm">
-            <thead className="bg-base-200/50">
+      {/* Reservations Data Table */}
+      <div className="surface-card rounded-lg overflow-hidden border border-slate-200">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="table table-sm min-w-[860px]">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
               <tr>
-                <th>Code</th>
-                <th>Guest & Rig</th>
-                <th>Site</th>
-                <th>Check-In</th>
-                <th>Check-Out</th>
-                <th>Nights</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Balance</th>
-                <th className="text-right">Desk Action</th>
+                <th className="min-w-[110px]">Code</th>
+                <th className="min-w-[180px]">Guest & Rig</th>
+                <th className="min-w-[100px]">Site</th>
+                <th className="min-w-[110px]">Check-In</th>
+                <th className="min-w-[110px]">Check-Out</th>
+                <th className="min-w-[70px]">Nights</th>
+                <th className="min-w-[120px]">Status</th>
+                <th className="min-w-[90px]">Total</th>
+                <th className="min-w-[90px]">Balance</th>
+                <th className="text-right min-w-[130px]">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="text-center py-12 text-xs text-base-content/60">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
-                    Loading reservations...
+                  <td colSpan={10} className="text-center py-14 text-xs text-slate-500 space-y-2">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto text-emerald-600 mb-1" />
+                    <p>Loading reservations...</p>
                   </td>
                 </tr>
               ) : reservations.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="text-center py-12 text-sm text-base-content/50">
-                    No reservations found matching your criteria.
+                  <td colSpan={10} className="text-center py-14 space-y-2">
+                    <div className="w-10 h-10 rounded-md bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                      <Inbox className="w-5 h-5" />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-700">No reservations found</p>
+                    <p className="text-xs text-slate-500">Try adjusting your filters or search terms.</p>
                   </td>
                 </tr>
               ) : (
@@ -247,16 +259,16 @@ export default function ReservationsPage() {
                   <tr
                     key={res._id}
                     onClick={() => setSelectedResId(res._id)}
-                    className="hover:bg-base-200/40 cursor-pointer transition-colors"
+                    className="hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-100"
                   >
-                    <td className="font-mono font-bold text-xs text-primary">
+                    <td className="font-mono font-bold text-xs text-emerald-700">
                       {res.confirmationCode}
                     </td>
                     <td>
-                      <div className="font-bold text-sm text-base-content">
+                      <div className="font-bold text-sm text-slate-900 truncate">
                         {res.guestSnapshot?.fullName}
                       </div>
-                      <div className="text-[11px] text-base-content/60 flex items-center gap-1">
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1">
                         <span>{formatRvType(res.guestSnapshot?.rvType || "travel_trailer")}</span>
                         {res.guestSnapshot?.rvLengthFt ? (
                           <span className="font-mono">({res.guestSnapshot.rvLengthFt}ft)</span>
@@ -264,26 +276,26 @@ export default function ReservationsPage() {
                       </div>
                     </td>
                     <td>
-                      <span className="badge badge-sm badge-outline font-mono font-bold">
+                      <span className="badge badge-xs font-mono font-bold bg-slate-100 text-slate-700 border-slate-200 rounded">
                         Site {res.siteSnapshot?.siteNumber}
                       </span>
                     </td>
-                    <td className="text-xs">{formatDate(res.checkInDate)}</td>
-                    <td className="text-xs">{formatDate(res.checkOutDate)}</td>
-                    <td className="text-xs font-semibold">{res.numNights} nt</td>
+                    <td className="text-xs font-medium">{formatDate(res.checkInDate)}</td>
+                    <td className="text-xs font-medium">{formatDate(res.checkOutDate)}</td>
+                    <td className="text-xs font-mono font-semibold">{res.numNights} nt</td>
                     <td>
                       <ReservationBadge status={res.status} />
                     </td>
-                    <td className="font-semibold text-xs text-base-content">
+                    <td className="font-bold text-xs text-slate-800 font-mono">
                       {formatCurrency(res.pricing?.totalAmount)}
                     </td>
                     <td>
                       {res.pricing?.balanceDue > 0 ? (
-                        <span className="font-bold text-xs text-error">
+                        <span className="font-bold text-xs text-rose-700 font-mono">
                           {formatCurrency(res.pricing?.balanceDue)}
                         </span>
                       ) : (
-                        <span className="font-semibold text-xs text-emerald-600">Paid</span>
+                        <span className="font-bold text-xs text-emerald-700 font-mono">Paid</span>
                       )}
                     </td>
                     <td className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -291,7 +303,7 @@ export default function ReservationsPage() {
                         {res.status === "confirmed" && (
                           <button
                             onClick={(e) => handleQuickCheckIn(e, res._id)}
-                            className="btn btn-success btn-xs text-white font-medium"
+                            className="btn btn-success btn-xs text-white font-bold rounded"
                             title="Check In"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -301,7 +313,7 @@ export default function ReservationsPage() {
                         {res.status === "checked_in" && (
                           <button
                             onClick={(e) => handleQuickCheckOut(e, res)}
-                            className="btn btn-info btn-xs text-white font-medium"
+                            className="btn btn-info btn-xs text-white font-bold rounded"
                             title="Check Out"
                           >
                             <LogOut className="w-3.5 h-3.5" />
@@ -310,7 +322,7 @@ export default function ReservationsPage() {
                         )}
                         <button
                           onClick={() => setSelectedResId(res._id)}
-                          className="btn btn-ghost btn-xs text-primary font-medium"
+                          className="btn btn-ghost btn-xs text-emerald-700 font-bold hover:bg-emerald-50 rounded"
                         >
                           View
                         </button>
@@ -325,15 +337,17 @@ export default function ReservationsPage() {
 
         {/* Pagination Bar */}
         {pagination.totalPages > 1 && (
-          <div className="p-4 border-t border-base-200 flex items-center justify-between text-xs text-base-content/70">
+          <div className="p-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50">
             <div>
-              Showing {reservations.length} of {pagination.total} reservations
+              Showing <span className="font-bold">{reservations.length}</span> of{" "}
+              <span className="font-bold">{pagination.total}</span> reservations
             </div>
             <div className="join">
               <button
                 disabled={pagination.page <= 1}
                 onClick={() => fetchReservations(pagination.page - 1)}
-                className="btn btn-outline btn-xs join-item"
+                className="btn btn-outline btn-xs join-item rounded-l-md"
+                aria-label="Previous page"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
@@ -343,7 +357,8 @@ export default function ReservationsPage() {
               <button
                 disabled={pagination.page >= pagination.totalPages}
                 onClick={() => fetchReservations(pagination.page + 1)}
-                className="btn btn-outline btn-xs join-item"
+                className="btn btn-outline btn-xs join-item rounded-r-md"
+                aria-label="Next page"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>

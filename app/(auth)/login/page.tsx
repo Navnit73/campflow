@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/Toast";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2, LogIn, Lock, Mail, Sparkles } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,66 +21,95 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login({ email, password });
-      success("Welcome back!");
+      success("Welcome back to CampFlow!");
       router.push("/dashboard");
     } catch (err: any) {
-      error(err?.message || "Invalid credentials");
+      error(err?.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDemoFill = () => {
+    setEmail("admin@campflow.com");
+    setPassword("password123");
+  };
+
   return (
-    <div className="card bg-base-100 shadow-xl border border-base-200 p-6 sm:p-8 space-y-6">
-      <div className="text-center space-y-1">
-        <h2 className="text-2xl font-bold text-base-content tracking-tight">
+    <div className="surface-card p-6 sm:p-8 space-y-6 shadow-xl border border-slate-200">
+      <div className="text-center space-y-1.5">
+        <h2 className="text-2xl font-black text-slate-900 tracking-tight">
           Sign In to CampFlow
         </h2>
-        <p className="text-xs text-base-content/60">
-          Enter your staff or owner credentials to access your park
+        <p className="text-xs text-slate-500 max-w-xs mx-auto">
+          Enter your staff or owner credentials to access your campground desk
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="label text-xs font-semibold py-1">Email Address</label>
-          <input
-            type="email"
-            placeholder="admin@campflow.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="input input-bordered input-sm sm:input-md w-full"
-            required
-          />
+          <label className="label text-xs font-bold text-slate-700 py-1">
+            Email Address
+          </label>
+          <div className="relative">
+            <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="email"
+              placeholder="admin@campflow.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input input-bordered input-md w-full pl-10 text-sm font-medium bg-slate-50/50 focus:bg-white focus:border-emerald-600"
+              required
+            />
+          </div>
         </div>
 
         <div>
           <div className="flex items-center justify-between">
-            <label className="label text-xs font-semibold py-1">Password</label>
+            <label className="label text-xs font-bold text-slate-700 py-1">
+              Password
+            </label>
           </div>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="input input-bordered input-sm sm:input-md w-full"
-            required
-          />
+          <div className="relative">
+            <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input input-bordered input-md w-full pl-10 text-sm bg-slate-50/50 focus:bg-white focus:border-emerald-600"
+              required
+            />
+          </div>
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="btn btn-primary w-full mt-2 font-bold shadow-sm gap-2"
+          className="btn btn-primary w-full mt-2 font-bold shadow-sm gap-2 text-sm h-11"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-          Sign In
+          Sign In to Dashboard
         </button>
       </form>
 
-      <div className="text-center text-xs text-base-content/70">
+      {/* Demo Credentials Helper Pill */}
+      <div className="p-3 rounded-xl bg-slate-100/70 border border-slate-200/80 flex items-center justify-between text-xs">
+        <div className="text-slate-600 font-medium">
+          <span className="font-bold text-slate-800">Demo Account:</span> admin@campflow.com
+        </div>
+        <button
+          type="button"
+          onClick={handleDemoFill}
+          className="btn btn-ghost btn-xs text-emerald-700 font-bold hover:bg-emerald-50"
+        >
+          Auto-Fill
+        </button>
+      </div>
+
+      <div className="text-center text-xs text-slate-600 pt-1">
         Don&apos;t have an account?{" "}
-        <Link href="/register" className="font-bold text-primary hover:underline">
+        <Link href="/register" className="font-bold text-emerald-700 hover:underline">
           Register your RV park
         </Link>
       </div>

@@ -5,8 +5,6 @@ interface StatCardProps {
   value: string | number;
   subtitle?: string;
   icon?: React.ReactNode;
-  trend?: string;
-  trendPositive?: boolean;
   colorClass?: string;
 }
 
@@ -15,28 +13,30 @@ export function StatCard({
   value,
   subtitle,
   icon,
-  trend,
-  trendPositive,
-  colorClass = "text-primary",
+  colorClass = "bg-emerald-500/10 text-emerald-600",
 }: StatCardProps) {
   return (
-    <div className="card bg-base-100 shadow-sm border border-base-200/80 hover:border-base-300 transition-all p-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-base-content/60">{title}</p>
-          <h3 className="text-2xl lg:text-3xl font-bold mt-1 tracking-tight text-base-content">{value}</h3>
-          {subtitle && <p className="text-xs text-base-content/60 mt-1">{subtitle}</p>}
-          {trend && (
-            <span
-              className={`inline-flex items-center text-xs font-semibold mt-2 ${
-                trendPositive ? "text-success" : "text-error"
-              }`}
-            >
-              {trend}
-            </span>
-          )}
+    <div className="surface-card p-4 rounded-lg flex flex-col justify-between space-y-2 border border-slate-200">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+          {title}
+        </span>
+        {icon && (
+          <div className={`p-1.5 rounded-md shrink-0 ${colorClass}`}>
+            {icon}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-0.5">
+        <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-slate-900 truncate">
+          {value}
         </div>
-        {icon && <div className={`p-3 rounded-xl bg-base-200/60 ${colorClass}`}>{icon}</div>}
+        {subtitle && (
+          <p className="text-[11px] text-slate-500 font-medium truncate">
+            {subtitle}
+          </p>
+        )}
       </div>
     </div>
   );

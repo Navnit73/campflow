@@ -18,7 +18,6 @@ import {
   Truck,
   Printer,
   DollarSign,
-  Clock,
   RefreshCw,
 } from "lucide-react";
 
@@ -137,34 +136,35 @@ export function ReservationDetailModal({
       onClose={onClose}
       title={data ? `Reservation ${data.confirmationCode}` : "Loading Details..."}
       subtitle={data ? `Booked via ${data.source?.replace("_", " ")}` : undefined}
-      maxWidth="max-w-4xl"
+      maxWidth="max-w-3xl"
     >
       {loading || !data ? (
-        <div className="p-12 text-center text-base-content/60">
-          <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
+        <div className="p-10 text-center text-slate-500">
+          <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-1.5 text-emerald-600" />
           Loading reservation details...
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Top Status & Fast Action Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-base-200/50 border border-base-200">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 p-3.5 rounded-lg bg-slate-50 border border-slate-200">
+            <div className="flex items-center gap-2.5">
               <ReservationBadge status={data.status} />
-              <span className="text-sm font-semibold text-base-content">
-                Site {data.siteSnapshot?.siteNumber} ({data.siteSnapshot?.siteTypeName})
+              <span className="text-sm font-bold text-slate-800">
+                Site {data.siteSnapshot?.siteNumber}{" "}
+                <span className="font-normal text-slate-500">({data.siteSnapshot?.siteTypeName})</span>
               </span>
             </div>
 
             {/* Desk Operations CTAs */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               {data.status === "confirmed" && (
                 <button
                   onClick={handleCheckIn}
                   disabled={actionLoading}
-                  className="btn btn-success btn-sm text-white gap-1.5 font-medium shadow-xs"
+                  className="btn btn-success btn-xs sm:btn-sm text-white gap-1 font-bold rounded-md"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Check In Guest
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Check In
                 </button>
               )}
 
@@ -172,19 +172,19 @@ export function ReservationDetailModal({
                 <button
                   onClick={handleCheckOut}
                   disabled={actionLoading}
-                  className="btn btn-info btn-sm text-white gap-1.5 font-medium shadow-xs"
+                  className="btn btn-info btn-xs sm:btn-sm text-white gap-1 font-bold rounded-md"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Check Out Guest
+                  <LogOut className="w-3.5 h-3.5" />
+                  Check Out
                 </button>
               )}
 
               {data.pricing?.balanceDue > 0 && (
                 <button
                   onClick={() => onOpenPayment(data)}
-                  className="btn btn-primary btn-sm gap-1.5 font-medium shadow-xs"
+                  className="btn btn-primary btn-xs sm:btn-sm gap-1 font-bold rounded-md"
                 >
-                  <DollarSign className="w-4 h-4" />
+                  <DollarSign className="w-3.5 h-3.5" />
                   Collect Payment ({formatCurrency(data.pricing.balanceDue)})
                 </button>
               )}
@@ -193,59 +193,59 @@ export function ReservationDetailModal({
                 <button
                   onClick={handleCancel}
                   disabled={actionLoading}
-                  className="btn btn-ghost btn-sm text-error gap-1 hover:bg-error/10"
+                  className="btn btn-ghost btn-xs sm:btn-sm text-rose-700 font-semibold gap-1 hover:bg-rose-50 rounded-md"
                 >
-                  <Ban className="w-4 h-4" />
+                  <Ban className="w-3.5 h-3.5" />
                   Cancel
                 </button>
               )}
 
               <button
                 onClick={handlePrint}
-                className="btn btn-outline btn-sm gap-1.5"
+                className="btn btn-outline btn-xs sm:btn-sm gap-1 font-semibold text-slate-700 rounded-md"
                 title="Print Confirmation / Folio"
               >
-                <Printer className="w-4 h-4" />
-                Print Folio
+                <Printer className="w-3.5 h-3.5" />
+                Print
               </button>
             </div>
           </div>
 
           {/* 3-Column Info Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Stay Dates */}
-            <div className="p-4 rounded-xl border border-base-200 bg-base-100 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-base-content/60 uppercase">
-                <Calendar className="w-4 h-4 text-primary" />
-                Stay Duration ({data.numNights} Nights)
+            <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                Stay ({data.numNights} Nights)
               </div>
-              <div className="pt-1">
-                <div className="text-xs text-base-content/60">Check-In:</div>
-                <div className="text-sm font-bold text-base-content">{formatDate(data.checkInDate)}</div>
+              <div className="pt-0.5">
+                <div className="text-[11px] text-slate-500 font-semibold">Check-In:</div>
+                <div className="text-sm font-bold text-slate-800">{formatDate(data.checkInDate)}</div>
               </div>
               <div>
-                <div className="text-xs text-base-content/60">Check-Out:</div>
-                <div className="text-sm font-bold text-base-content">{formatDate(data.checkOutDate)}</div>
+                <div className="text-[11px] text-slate-500 font-semibold">Check-Out:</div>
+                <div className="text-sm font-bold text-slate-800">{formatDate(data.checkOutDate)}</div>
               </div>
-              <div className="text-xs text-base-content/70 pt-1 border-t border-base-200">
+              <div className="text-xs text-slate-600 pt-1.5 border-t border-slate-100 font-medium">
                 {data.adults} Adults • {data.children} Children • {data.pets} Pets
               </div>
             </div>
 
             {/* Guest & Rig */}
-            <div className="p-4 rounded-xl border border-base-200 bg-base-100 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-base-content/60 uppercase">
-                <User className="w-4 h-4 text-primary" />
+            <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <User className="w-3.5 h-3.5 text-emerald-600" />
                 Guest Profile
               </div>
-              <div className="pt-1">
-                <div className="text-sm font-bold text-base-content">{data.guestSnapshot?.fullName}</div>
-                <div className="text-xs text-base-content/70">{data.guestSnapshot?.email}</div>
-                <div className="text-xs font-mono text-base-content/70">{data.guestSnapshot?.phone}</div>
+              <div className="pt-0.5">
+                <div className="text-sm font-bold text-slate-800">{data.guestSnapshot?.fullName}</div>
+                <div className="text-xs text-slate-600 truncate">{data.guestSnapshot?.email}</div>
+                <div className="text-xs font-mono text-slate-600">{data.guestSnapshot?.phone}</div>
               </div>
-              <div className="pt-1 border-t border-base-200 flex items-center gap-1.5 text-xs text-base-content/80">
+              <div className="pt-1.5 border-t border-slate-100 flex items-center gap-1 text-xs text-slate-700 font-medium">
                 <Truck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>
+                <span className="truncate">
                   {formatRvType(data.guestSnapshot?.rvType || "travel_trailer")}{" "}
                   {data.guestSnapshot?.rvLengthFt ? `(${data.guestSnapshot.rvLengthFt}ft)` : ""}
                 </span>
@@ -253,18 +253,18 @@ export function ReservationDetailModal({
             </div>
 
             {/* Site Specs */}
-            <div className="p-4 rounded-xl border border-base-200 bg-base-100 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-base-content/60 uppercase">
-                <MapPin className="w-4 h-4 text-primary" />
+            <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                 Site Details
               </div>
-              <div className="pt-1">
-                <div className="text-sm font-bold text-base-content">
+              <div className="pt-0.5">
+                <div className="text-sm font-bold text-slate-800 font-mono">
                   Site {data.siteSnapshot?.siteNumber}
                 </div>
-                <div className="text-xs text-base-content/70">{data.siteSnapshot?.siteTypeName}</div>
+                <div className="text-xs text-slate-600">{data.siteSnapshot?.siteTypeName}</div>
               </div>
-              <div className="pt-2">
+              <div className="pt-1.5">
                 <HookupIcons
                   hookups={data.siteSnapshot?.hookups}
                   rigType={data.siteSnapshot?.rigType}
@@ -275,56 +275,56 @@ export function ReservationDetailModal({
           </div>
 
           {/* Pricing & Financial Breakdown */}
-          <div className="p-4 rounded-xl border border-base-200 bg-base-100">
-            <div className="flex items-center justify-between pb-3 border-b border-base-200">
-              <h4 className="text-sm font-bold text-base-content flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-primary" />
+          <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-2.5">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                <CreditCard className="w-4 h-4 text-emerald-600" />
                 Billing Summary
-              </h4>
-              <span className="text-xs text-base-content/60">
+              </h3>
+              <span className="text-xs text-slate-500 font-mono">
                 Nightly Rate: {formatCurrency(data.pricing?.nightlyRate)}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-3 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
               <div>
-                <div className="text-xs text-base-content/60">Subtotal</div>
-                <div className="font-semibold text-base-content">
+                <div className="text-xs text-slate-500 font-semibold">Subtotal</div>
+                <div className="font-bold text-slate-800 font-mono text-xs sm:text-sm">
                   {formatCurrency(data.pricing?.baseSubtotal)}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-base-content/60">Discount</div>
-                <div className="font-semibold text-emerald-600">
+                <div className="text-xs text-slate-500 font-semibold">Discount</div>
+                <div className="font-bold text-emerald-700 font-mono text-xs sm:text-sm">
                   -{formatCurrency(data.pricing?.discountAmount)}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-base-content/60">Tax (7.5%)</div>
-                <div className="font-semibold text-base-content">
+                <div className="text-xs text-slate-500 font-semibold">Tax (7.5%)</div>
+                <div className="font-bold text-slate-800 font-mono text-xs sm:text-sm">
                   +{formatCurrency(data.pricing?.taxAmount)}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-base-content/60">Total Bill</div>
-                <div className="font-bold text-base-content text-base">
+                <div className="text-xs text-slate-500 font-semibold">Total Bill</div>
+                <div className="font-black text-slate-900 font-mono text-sm sm:text-base">
                   {formatCurrency(data.pricing?.totalAmount)}
                 </div>
               </div>
             </div>
 
-            <div className="mt-3 p-3 rounded-lg bg-base-200/60 flex items-center justify-between">
+            <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-between">
               <div>
-                <span className="text-xs text-base-content/60 font-medium">Paid Amount: </span>
-                <span className="text-sm font-bold text-emerald-600">
+                <span className="text-xs text-slate-600 font-medium">Paid: </span>
+                <span className="text-sm font-black text-emerald-700 font-mono">
                   {formatCurrency(data.pricing?.paidAmount)}
                 </span>
               </div>
               <div>
-                <span className="text-xs text-base-content/60 font-medium">Balance Due: </span>
+                <span className="text-xs text-slate-600 font-medium">Balance Due: </span>
                 <span
-                  className={`text-sm font-bold ${
-                    data.pricing?.balanceDue > 0 ? "text-error" : "text-emerald-600"
+                  className={`text-sm font-black font-mono ${
+                    data.pricing?.balanceDue > 0 ? "text-rose-700" : "text-emerald-700"
                   }`}
                 >
                   {formatCurrency(data.pricing?.balanceDue)}
@@ -335,14 +335,14 @@ export function ReservationDetailModal({
 
           {/* Payment Transactions Table */}
           {data.payments && data.payments.length > 0 && (
-            <div className="p-4 rounded-xl border border-base-200 bg-base-100 space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                Payment History
-              </h4>
+            <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Payment History ({data.payments.length})
+              </h3>
               <div className="overflow-x-auto">
                 <table className="table table-xs">
                   <thead>
-                    <tr>
+                    <tr className="text-slate-500">
                       <th>Date</th>
                       <th>Method</th>
                       <th>Reference</th>
@@ -353,15 +353,15 @@ export function ReservationDetailModal({
                   <tbody>
                     {data.payments.map((p: any) => (
                       <tr key={p._id}>
-                        <td>{formatDateTime(p.createdAt)}</td>
-                        <td className="capitalize">{p.method?.replace("_", " ")}</td>
-                        <td className="font-mono text-[11px] text-base-content/60">
+                        <td className="text-xs">{formatDateTime(p.createdAt)}</td>
+                        <td className="capitalize font-medium">{p.method?.replace("_", " ")}</td>
+                        <td className="font-mono text-[11px] text-slate-500">
                           {p.transactionReference || "—"}
                         </td>
                         <td>
                           <PaymentStatusBadge status={p.status} />
                         </td>
-                        <td className="text-right font-bold text-emerald-600">
+                        <td className="text-right font-bold text-emerald-700 font-mono">
                           {formatCurrency(p.amount)}
                         </td>
                       </tr>
@@ -372,19 +372,19 @@ export function ReservationDetailModal({
             </div>
           )}
 
-          {/* Notes & Special Requests */}
+          {/* Notes */}
           {(data.specialRequests || data.notes) && (
-            <div className="p-4 rounded-xl border border-base-200 bg-base-200/30 text-xs space-y-1">
+            <div className="p-3 rounded-lg border border-slate-200 bg-slate-50 text-xs space-y-1">
               {data.specialRequests && (
                 <div>
-                  <span className="font-bold text-base-content">Guest Special Requests: </span>
-                  <span className="text-base-content/80">{data.specialRequests}</span>
+                  <span className="font-bold text-slate-800">Guest Requests: </span>
+                  <span className="text-slate-700">{data.specialRequests}</span>
                 </div>
               )}
               {data.notes && (
                 <div>
-                  <span className="font-bold text-base-content">Internal Staff Notes: </span>
-                  <span className="text-base-content/80">{data.notes}</span>
+                  <span className="font-bold text-slate-800">Staff Notes: </span>
+                  <span className="text-slate-700">{data.notes}</span>
                 </div>
               )}
             </div>

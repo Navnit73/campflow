@@ -13,14 +13,12 @@ import {
   Truck,
   MapPin,
   CheckCircle2,
-  CreditCard,
-  Zap,
-  ArrowRight,
   ShieldCheck,
   Loader2,
   ChevronRight,
   Phone,
   Mail,
+  Inbox,
 } from "lucide-react";
 
 export default function PublicBookingPage() {
@@ -93,7 +91,6 @@ export default function PublicBookingPage() {
   };
 
   useEffect(() => {
-    // Initial fetch to load property information
     apiClient
       .get("/api/public/book/availability", {
         params: { slug, checkInDate, checkOutDate, rvType, rigLengthFt },
@@ -155,35 +152,35 @@ export default function PublicBookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-base-200/40 text-base-content flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">
       {/* Header */}
-      <header className="bg-base-100 border-b border-base-200 sticky top-0 z-30 px-6 py-3">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
-              <Trees className="w-6 h-6" />
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-3">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold">
+              <Trees className="w-4 h-4" />
             </div>
             <div>
-              <h1 className="font-bold text-lg leading-tight text-base-content">
+              <h1 className="font-black text-base leading-tight text-slate-900">
                 {property?.name || "CampFlow RV Resort"}
               </h1>
-              <p className="text-xs text-base-content/60 flex items-center gap-1">
+              <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                 <MapPin className="w-3 h-3 text-emerald-600" />
                 {property?.address?.city || "Mountain View"}, {property?.address?.state || "CO"}
               </p>
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-4 text-xs font-semibold text-base-content/70">
+          <div className="hidden sm:flex items-center gap-3.5 text-xs font-bold text-slate-600">
             {property?.phone && (
               <span className="flex items-center gap-1">
-                <Phone className="w-3.5 h-3.5 text-primary" />
+                <Phone className="w-3 h-3 text-emerald-600" />
                 {property.phone}
               </span>
             )}
             {property?.email && (
               <span className="flex items-center gap-1">
-                <Mail className="w-3.5 h-3.5 text-primary" />
+                <Mail className="w-3 h-3 text-emerald-600" />
                 {property.email}
               </span>
             )}
@@ -192,88 +189,102 @@ export default function PublicBookingPage() {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-5xl w-full mx-auto px-4 py-8 flex-1 space-y-6">
+      <main className="max-w-4xl w-full mx-auto px-4 py-6 flex-1 space-y-5">
         {/* Step Indicator */}
-        <div className="steps steps-horizontal w-full text-xs">
+        <div className="flex items-center justify-center gap-1.5 text-xs font-bold">
           <button
             onClick={() => setStep(1)}
-            className={`step ${step >= 1 ? "step-primary font-bold" : ""}`}
+            className={`px-3 py-1.5 rounded-md transition-all ${
+              step === 1
+                ? "bg-emerald-600 text-white"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+            }`}
           >
-            Dates & Rig
+            1. Dates & Rig
           </button>
+          <span className="text-slate-300">→</span>
           <button
             onClick={() => setStep(2)}
             disabled={!property}
-            className={`step ${step >= 2 ? "step-primary font-bold" : ""}`}
+            className={`px-3 py-1.5 rounded-md transition-all ${
+              step === 2
+                ? "bg-emerald-600 text-white"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 disabled:opacity-50"
+            }`}
           >
-            Select Site
+            2. Select Site
           </button>
+          <span className="text-slate-300">→</span>
           <button
             disabled={!selectedSite}
-            className={`step ${step >= 3 ? "step-primary font-bold" : ""}`}
+            className={`px-3 py-1.5 rounded-md transition-all ${
+              step === 3
+                ? "bg-emerald-600 text-white"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 disabled:opacity-50"
+            }`}
           >
-            Guest Info & Confirm
+            3. Guest Info & Pay
           </button>
         </div>
 
         {errorMsg && (
-          <div className="alert alert-error text-sm text-error-content shadow-sm rounded-xl">
+          <div className="p-3 rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
             <span>{errorMsg}</span>
           </div>
         )}
 
         {/* STEP 1: Search Form */}
         {step === 1 && (
-          <div className="card bg-base-100 shadow-lg border border-base-200 p-6 sm:p-8 space-y-6">
-            <div className="border-b border-base-200 pb-3">
-              <h2 className="text-xl font-bold tracking-tight text-base-content">
+          <div className="surface-card p-5 sm:p-6 rounded-lg space-y-5 border border-slate-200">
+            <div className="border-b border-slate-100 pb-2.5">
+              <h2 className="text-lg font-black tracking-tight text-slate-900">
                 Book Your RV Site or Campsite
               </h2>
-              <p className="text-xs text-base-content/60 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Select your dates, rig dimensions, and hookup preferences to check live availability
               </p>
             </div>
 
-            <form onSubmit={handleSearch} className="space-y-6">
+            <form onSubmit={handleSearch} className="space-y-4">
               {/* Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="label text-xs font-bold py-1">Check-In Date</label>
+                  <label className="label text-xs font-bold text-slate-700 py-0.5">Check-In Date</label>
                   <input
                     type="date"
                     value={checkInDate}
                     onChange={(e) => setCheckInDate(e.target.value)}
                     min={todayStr}
-                    className="input input-bordered w-full font-medium"
+                    className="input input-bordered input-sm w-full font-medium rounded-md"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label text-xs font-bold py-1">Check-Out Date</label>
+                  <label className="label text-xs font-bold text-slate-700 py-0.5">Check-Out Date</label>
                   <input
                     type="date"
                     value={checkOutDate}
                     onChange={(e) => setCheckOutDate(e.target.value)}
                     min={checkInDate}
-                    className="input input-bordered w-full font-medium"
+                    className="input input-bordered input-sm w-full font-medium rounded-md"
                     required
                   />
                 </div>
               </div>
 
               {/* Rig Specifications */}
-              <div className="p-4 rounded-xl bg-base-200/50 border border-base-200 space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-1.5">
-                  <Truck className="w-4 h-4 text-emerald-600" />
+              <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2.5">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-emerald-600" />
                   Your RV & Camping Equipment
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="label text-xs font-semibold py-1">Equipment Type</label>
+                    <label className="label text-xs font-bold text-slate-700 py-0.5">Equipment Type</label>
                     <select
                       value={rvType}
                       onChange={(e) => setRvType(e.target.value)}
-                      className="select select-bordered select-sm w-full"
+                      className="select select-bordered select-sm w-full bg-white font-medium rounded-md"
                     >
                       {RV_TYPES.map((t) => (
                         <option key={t} value={t}>
@@ -284,23 +295,23 @@ export default function PublicBookingPage() {
                   </div>
 
                   <div>
-                    <label className="label text-xs font-semibold py-1">Length (Total Feet)</label>
+                    <label className="label text-xs font-bold text-slate-700 py-0.5">Length (Total Feet)</label>
                     <input
                       type="number"
                       min={0}
                       max={55}
                       value={rigLengthFt}
                       onChange={(e) => setRigLengthFt(Number(e.target.value))}
-                      className="input input-bordered input-sm w-full font-mono font-bold"
+                      className="input input-bordered input-sm w-full font-mono font-bold bg-white rounded-md"
                     />
                   </div>
 
                   <div>
-                    <label className="label text-xs font-semibold py-1">Hookup Preference</label>
+                    <label className="label text-xs font-bold text-slate-700 py-0.5">Hookup Preference</label>
                     <select
                       value={hookupType}
                       onChange={(e) => setHookupType(e.target.value)}
-                      className="select select-bordered select-sm w-full"
+                      className="select select-bordered select-sm w-full bg-white font-medium rounded-md"
                     >
                       <option value="any">Any Available Hookup</option>
                       <option value="50A">50 Amp Service</option>
@@ -312,38 +323,38 @@ export default function PublicBookingPage() {
               </div>
 
               {/* Guests Count */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="label text-xs font-semibold py-1">Adults</label>
+                  <label className="label text-xs font-bold text-slate-700 py-0.5">Adults</label>
                   <input
                     type="number"
                     min={1}
                     max={8}
                     value={adults}
                     onChange={(e) => setAdults(Number(e.target.value))}
-                    className="input input-bordered input-sm w-full"
+                    className="input input-bordered input-sm w-full rounded-md"
                   />
                 </div>
                 <div>
-                  <label className="label text-xs font-semibold py-1">Children</label>
+                  <label className="label text-xs font-bold text-slate-700 py-0.5">Children</label>
                   <input
                     type="number"
                     min={0}
                     max={6}
                     value={children}
                     onChange={(e) => setChildren(Number(e.target.value))}
-                    className="input input-bordered input-sm w-full"
+                    className="input input-bordered input-sm w-full rounded-md"
                   />
                 </div>
                 <div>
-                  <label className="label text-xs font-semibold py-1">Pets</label>
+                  <label className="label text-xs font-bold text-slate-700 py-0.5">Pets</label>
                   <input
                     type="number"
                     min={0}
                     max={4}
                     value={pets}
                     onChange={(e) => setPets(Number(e.target.value))}
-                    className="input input-bordered input-sm w-full"
+                    className="input input-bordered input-sm w-full rounded-md"
                   />
                 </div>
               </div>
@@ -351,9 +362,9 @@ export default function PublicBookingPage() {
               <button
                 type="submit"
                 disabled={searching}
-                className="btn btn-primary w-full gap-2 font-bold shadow-md text-base"
+                className="btn btn-primary w-full gap-2 font-bold text-xs rounded-md mt-1"
               >
-                {searching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 Find Available Sites
               </button>
             </form>
@@ -362,74 +373,78 @@ export default function PublicBookingPage() {
 
         {/* STEP 2: Site Selection */}
         {step === 2 && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-base-100 border border-base-200 shadow-xs">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3.5 rounded-lg surface-card border border-slate-200">
               <div>
-                <span className="text-xs text-base-content/60">Selected Dates:</span>
-                <div className="font-bold text-sm text-base-content">
+                <span className="text-xs text-slate-500 font-semibold">Selected Dates:</span>
+                <div className="font-bold text-sm text-slate-900">
                   {formatDate(checkInDate)} → {formatDate(checkOutDate)}
                 </div>
               </div>
-              <button onClick={() => setStep(1)} className="btn btn-outline btn-xs font-semibold">
+              <button onClick={() => setStep(1)} className="btn btn-outline btn-xs font-bold text-xs rounded-md">
                 Change Dates
               </button>
             </div>
 
             <div className="space-y-3">
-              <h3 className="font-bold text-lg text-base-content">
+              <h3 className="font-bold text-base text-slate-900">
                 Available Sites ({availableSites.length})
               </h3>
 
               {availableSites.length === 0 ? (
-                <div className="card bg-base-100 p-12 text-center border border-base-200 space-y-3">
-                  <p className="text-sm text-base-content/70">
-                    No sites available matching your exact rig length or hookup criteria for these dates.
+                <div className="surface-card p-10 rounded-lg text-center space-y-2.5 border border-slate-200">
+                  <div className="w-10 h-10 rounded-md bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                    <Inbox className="w-5 h-5" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700">
+                    No sites available matching your criteria for these dates.
                   </p>
-                  <button onClick={() => setStep(1)} className="btn btn-primary btn-sm mx-auto">
+                  <button onClick={() => setStep(1)} className="btn btn-primary btn-sm mx-auto font-bold rounded-md">
                     Try Different Dates
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {availableSites.map((site) => (
                     <div
                       key={site._id}
-                      className="card bg-base-100 border border-base-200 hover:border-primary shadow-xs transition-all p-5 flex flex-col justify-between space-y-4"
+                      className="surface-card rounded-lg hover:border-emerald-500 transition-all p-4 flex flex-col justify-between space-y-3 border border-slate-200"
                     >
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <div className="flex items-start justify-between">
                           <div>
-                            <span className="badge badge-neutral font-mono font-bold text-xs">
+                            <span className="badge badge-xs font-mono font-bold bg-slate-100 text-slate-800 border-slate-200 rounded">
                               Site {site.siteNumber}
                             </span>
-                            <h4 className="font-bold text-base text-base-content mt-1">
+                            <h4 className="font-bold text-sm text-slate-900 mt-1">
                               {site.name || `Site ${site.siteNumber}`}
                             </h4>
-                            <p className="text-xs text-base-content/60">
+                            <p className="text-xs text-slate-500 font-medium">
                               {site.siteTypeSnapshot?.name}
                             </p>
                           </div>
 
                           <div className="text-right">
-                            <span className="text-lg font-black text-emerald-600 font-mono">
+                            <span className="text-base font-black text-emerald-700 font-mono">
                               {formatCurrency(site.currentBaseRate)}
                             </span>
-                            <span className="text-[11px] text-base-content/60 block">/ night</span>
+                            <span className="text-[10px] text-slate-400 block font-medium">/ nt</span>
                           </div>
                         </div>
 
-                        <div className="pt-2">
+                        <div className="pt-1">
                           <HookupIcons
                             hookups={site.siteTypeSnapshot?.hookups}
                             rigType={site.rigType}
                             maxRigLength={site.siteTypeSnapshot?.maxRigLength}
+                            compact
                           />
                         </div>
 
                         {site.amenities && site.amenities.length > 0 && (
-                          <div className="flex flex-wrap gap-1 text-[11px] text-base-content/70 pt-1">
+                          <div className="flex flex-wrap gap-1 text-[10px] text-slate-600 pt-0.5">
                             {site.amenities.slice(0, 3).map((a: string) => (
-                              <span key={a} className="badge badge-xs badge-ghost">
+                              <span key={a} className="badge badge-xs badge-ghost text-[9px] rounded">
                                 {a}
                               </span>
                             ))}
@@ -437,19 +452,19 @@ export default function PublicBookingPage() {
                         )}
                       </div>
 
-                      <div className="pt-3 border-t border-base-200 flex items-center justify-between">
+                      <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between">
                         <div className="text-xs">
-                          <span className="text-base-content/60">Total with tax: </span>
-                          <span className="font-bold text-base-content">
+                          <span className="text-slate-500">Total with tax: </span>
+                          <span className="font-black text-slate-900 font-mono">
                             {formatCurrency(site.calculatedPricing?.totalAmount)}
                           </span>
                         </div>
 
                         <button
                           onClick={() => handleSelectSite(site)}
-                          className="btn btn-primary btn-sm gap-1.5 font-bold shadow-xs"
+                          className="btn btn-primary btn-xs sm:btn-sm gap-1 font-bold rounded-md"
                         >
-                          Book Site <ChevronRight className="w-4 h-4" />
+                          Book Site <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
@@ -462,118 +477,118 @@ export default function PublicBookingPage() {
 
         {/* STEP 3: Guest Details & Instant Checkout */}
         {step === 3 && selectedSite && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Form */}
-            <div className="lg:col-span-2 card bg-base-100 shadow-lg border border-base-200 p-6 sm:p-8 space-y-6">
-              <div className="border-b border-base-200 pb-3">
-                <h2 className="text-xl font-bold tracking-tight text-base-content">
+            <div className="lg:col-span-2 surface-card p-5 rounded-lg space-y-4 border border-slate-200">
+              <div className="border-b border-slate-100 pb-2.5">
+                <h2 className="text-lg font-black tracking-tight text-slate-900">
                   Camper Contact Information
                 </h2>
-                <p className="text-xs text-base-content/60 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Your reservation confirmation will be sent directly to this email
                 </p>
               </div>
 
-              <form onSubmit={handleCompleteBooking} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form onSubmit={handleCompleteBooking} className="space-y-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="label text-xs font-semibold py-1">First Name</label>
+                    <label className="label text-xs font-bold text-slate-700 py-0.5">First Name</label>
                     <input
                       type="text"
                       placeholder="Marcus"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="input input-bordered input-sm w-full"
+                      className="input input-bordered input-sm w-full font-medium rounded-md"
                       required
                     />
                   </div>
                   <div>
-                    <label className="label text-xs font-semibold py-1">Last Name</label>
+                    <label className="label text-xs font-bold text-slate-700 py-0.5">Last Name</label>
                     <input
                       type="text"
                       placeholder="Holloway"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="input input-bordered input-sm w-full"
+                      className="input input-bordered input-sm w-full font-medium rounded-md"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="label text-xs font-semibold py-1">Email Address</label>
+                    <label className="label text-xs font-bold text-slate-700 py-0.5">Email Address</label>
                     <input
                       type="email"
                       placeholder="marcus@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="input input-bordered input-sm w-full"
+                      className="input input-bordered input-sm w-full rounded-md"
                       required
                     />
                   </div>
                   <div>
-                    <label className="label text-xs font-semibold py-1">Mobile Phone</label>
+                    <label className="label text-xs font-bold text-slate-700 py-0.5">Mobile Phone</label>
                     <input
                       type="tel"
                       placeholder="(555) 000-0000"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="input input-bordered input-sm w-full font-mono"
+                      className="input input-bordered input-sm w-full font-mono rounded-md"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="label text-xs font-semibold py-1">License Plate (optional)</label>
+                  <label className="label text-xs font-bold text-slate-700 py-0.5">License Plate (optional)</label>
                   <input
                     type="text"
                     placeholder="CO-849X"
                     value={licensePlate}
                     onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
-                    className="input input-bordered input-sm w-full uppercase font-mono"
+                    className="input input-bordered input-sm w-full uppercase font-mono rounded-md"
                   />
                 </div>
 
                 <div>
-                  <label className="label text-xs font-semibold py-1">Discount Promo Code</label>
+                  <label className="label text-xs font-bold text-slate-700 py-0.5">Discount Promo Code</label>
                   <input
                     type="text"
                     placeholder="GOODSAM, MILITARY"
                     value={discountCode}
                     onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                    className="input input-bordered input-sm w-full uppercase font-mono"
+                    className="input input-bordered input-sm w-full uppercase font-mono rounded-md"
                   />
                 </div>
 
                 <div>
-                  <label className="label text-xs font-semibold py-1">Special Requests or Arrival Notes</label>
+                  <label className="label text-xs font-bold text-slate-700 py-0.5">Special Requests or Arrival Notes</label>
                   <textarea
                     placeholder="Traveling with pets, arriving after 6 PM, etc..."
                     value={specialRequests}
                     onChange={(e) => setSpecialRequests(e.target.value)}
-                    className="textarea textarea-bordered textarea-sm w-full"
+                    className="textarea textarea-bordered textarea-sm w-full rounded-md"
                     rows={2}
                   />
                 </div>
 
                 {/* Instant Mock Payment Gateway */}
-                <div className="p-4 rounded-xl bg-base-200/50 border border-base-200 space-y-2">
-                  <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-base-content">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider text-slate-800">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                     Instant Secure Checkout (Demo Mode)
                   </div>
-                  <p className="text-xs text-base-content/70">
+                  <p className="text-xs text-slate-600">
                     Payment is automatically authorized and confirmed upon submission.
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center justify-between pt-1">
                   <button
                     type="button"
                     onClick={() => setStep(2)}
-                    className="btn btn-ghost btn-sm"
+                    className="btn btn-ghost btn-xs sm:btn-sm font-semibold text-xs rounded-md"
                   >
                     ← Back to Sites
                   </button>
@@ -581,12 +596,12 @@ export default function PublicBookingPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="btn btn-primary btn-md gap-2 font-bold shadow-md px-8"
+                    className="btn btn-primary btn-sm gap-1.5 font-bold px-6 text-xs rounded-md"
                   >
                     {submitting ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <CheckCircle2 className="w-5 h-5" />
+                      <CheckCircle2 className="w-4 h-4" />
                     )}
                     Confirm & Book Now
                   </button>
@@ -595,54 +610,54 @@ export default function PublicBookingPage() {
             </div>
 
             {/* Summary Card */}
-            <div className="card bg-base-100 shadow-md border border-base-200 p-6 space-y-4 h-fit sticky top-20">
-              <h3 className="font-bold text-base text-base-content border-b border-base-200 pb-2">
+            <div className="surface-card p-4 rounded-lg space-y-3 h-fit sticky top-20 border border-slate-200">
+              <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2">
                 Booking Summary
               </h3>
 
-              <div className="text-xs space-y-2 text-base-content/80">
+              <div className="text-xs space-y-1.5 text-slate-700">
                 <div className="flex justify-between">
-                  <span className="font-semibold text-base-content">Site:</span>
-                  <span className="font-bold font-mono">Site {selectedSite.siteNumber}</span>
+                  <span className="font-semibold text-slate-500">Site:</span>
+                  <span className="font-bold font-mono text-slate-900">Site {selectedSite.siteNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Type:</span>
+                  <span className="font-semibold text-slate-500">Type:</span>
                   <span>{selectedSite.siteTypeSnapshot?.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Check-In:</span>
+                  <span className="font-semibold text-slate-500">Check-In:</span>
                   <span>{formatDate(checkInDate)} (1:00 PM)</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Check-Out:</span>
+                  <span className="font-semibold text-slate-500">Check-Out:</span>
                   <span>{formatDate(checkOutDate)} (11:00 AM)</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Nights:</span>
-                  <span>{selectedSite.calculatedPricing?.numNights} nights</span>
+                  <span className="font-semibold text-slate-500">Nights:</span>
+                  <span className="font-mono">{selectedSite.calculatedPricing?.numNights} nights</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Guests:</span>
+                  <span className="font-semibold text-slate-500">Guests:</span>
                   <span>{adults} Adults, {children} Children</span>
                 </div>
               </div>
 
-              <div className="border-t border-base-200 pt-3 space-y-1.5 text-xs">
+              <div className="border-t border-slate-100 pt-2.5 space-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-base-content/60">Nightly Rate:</span>
-                  <span>{formatCurrency(selectedSite.currentBaseRate)}</span>
+                  <span className="text-slate-500">Nightly Rate:</span>
+                  <span className="font-mono">{formatCurrency(selectedSite.currentBaseRate)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-base-content/60">Base Subtotal:</span>
-                  <span>{formatCurrency(selectedSite.calculatedPricing?.baseSubtotal)}</span>
+                  <span className="text-slate-500">Base Subtotal:</span>
+                  <span className="font-mono">{formatCurrency(selectedSite.calculatedPricing?.baseSubtotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-base-content/60">Taxes (7.5%):</span>
-                  <span>{formatCurrency(selectedSite.calculatedPricing?.taxAmount)}</span>
+                  <span className="text-slate-500">Taxes (7.5%):</span>
+                  <span className="font-mono">+{formatCurrency(selectedSite.calculatedPricing?.taxAmount)}</span>
                 </div>
-                <div className="flex justify-between text-base font-bold text-base-content pt-2 border-t border-base-200">
+                <div className="flex justify-between text-sm font-bold text-slate-900 pt-2 border-t border-slate-100">
                   <span>Total Due:</span>
-                  <span className="text-emerald-600 font-mono font-black">
+                  <span className="text-emerald-700 font-mono font-black">
                     {formatCurrency(selectedSite.calculatedPricing?.totalAmount)}
                   </span>
                 </div>
@@ -653,7 +668,7 @@ export default function PublicBookingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-base-100 border-t border-base-200 py-6 text-center text-xs text-base-content/60">
+      <footer className="bg-white border-t border-slate-200 py-5 text-center text-xs text-slate-500">
         <p>Powered by CampFlow SaaS • Independent RV Park Management</p>
       </footer>
     </div>

@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { RV_TYPES } from "@/lib/constants";
 import { calculatePricing } from "@/lib/utils/pricing";
 import { formatCurrency, formatRvType } from "@/lib/utils/format";
-import { Loader2 } from "lucide-react";
+import { Loader2, Calendar, User, CreditCard } from "lucide-react";
 
 interface NewReservationModalProps {
   isOpen: boolean;
@@ -149,22 +149,23 @@ export function NewReservationModal({
       onClose={onClose}
       title="Create New Reservation"
       subtitle="Book a site and record camper details"
-      maxWidth="max-w-4xl"
+      maxWidth="max-w-3xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Section 1: Dates & Site Selection */}
-        <div className="p-4 rounded-xl bg-base-200/50 border border-base-200 space-y-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/70">
+        <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2.5">
+          <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
+            <Calendar className="w-3.5 h-3.5 text-emerald-600" />
             1. Site & Dates
-          </h4>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="label text-xs font-semibold py-1">Site</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Site</label>
               <select
                 value={siteId}
                 onChange={(e) => setSiteId(e.target.value)}
-                className="select select-bordered select-sm w-full font-medium"
+                className="select select-bordered select-sm w-full font-medium bg-white rounded-md"
                 required
               >
                 <option value="" disabled>Select Site</option>
@@ -177,126 +178,127 @@ export function NewReservationModal({
             </div>
 
             <div>
-              <label className="label text-xs font-semibold py-1">Check-In Date</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Check-In Date</label>
               <input
                 type="date"
                 value={checkInDate}
                 onChange={(e) => setCheckInDate(e.target.value)}
-                className="input input-bordered input-sm w-full font-medium"
+                className="input input-bordered input-sm w-full font-medium bg-white rounded-md"
                 required
               />
             </div>
 
             <div>
-              <label className="label text-xs font-semibold py-1">Check-Out Date</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Check-Out Date</label>
               <input
                 type="date"
                 value={checkOutDate}
                 onChange={(e) => setCheckOutDate(e.target.value)}
-                className="input input-bordered input-sm w-full font-medium"
+                className="input input-bordered input-sm w-full font-medium bg-white rounded-md"
                 min={checkInDate}
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 pt-1">
+          <div className="grid grid-cols-3 gap-3 pt-0.5">
             <div>
-              <label className="label text-xs font-semibold py-1">Adults</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Adults</label>
               <input
                 type="number"
                 min={1}
                 max={12}
                 value={adults}
                 onChange={(e) => setAdults(Number(e.target.value))}
-                className="input input-bordered input-sm w-full"
+                className="input input-bordered input-sm w-full bg-white rounded-md"
               />
             </div>
             <div>
-              <label className="label text-xs font-semibold py-1">Children</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Children</label>
               <input
                 type="number"
                 min={0}
                 max={10}
                 value={children}
                 onChange={(e) => setChildren(Number(e.target.value))}
-                className="input input-bordered input-sm w-full"
+                className="input input-bordered input-sm w-full bg-white rounded-md"
               />
             </div>
             <div>
-              <label className="label text-xs font-semibold py-1">Pets</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Pets</label>
               <input
                 type="number"
                 min={0}
                 max={6}
                 value={pets}
                 onChange={(e) => setPets(Number(e.target.value))}
-                className="input input-bordered input-sm w-full"
+                className="input input-bordered input-sm w-full bg-white rounded-md"
               />
             </div>
           </div>
         </div>
 
         {/* Section 2: Guest Information */}
-        <div className="p-4 rounded-xl bg-base-200/50 border border-base-200 space-y-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/70">
+        <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2.5">
+          <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
+            <User className="w-3.5 h-3.5 text-emerald-600" />
             2. Guest Profile & Rig Specs
-          </h4>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="label text-xs font-semibold py-1">First Name</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">First Name</label>
               <input
                 type="text"
                 placeholder="John"
                 value={guestFirstName}
                 onChange={(e) => setGuestFirstName(e.target.value)}
-                className="input input-bordered input-sm w-full"
+                className="input input-bordered input-sm w-full bg-white rounded-md"
                 required
               />
             </div>
             <div>
-              <label className="label text-xs font-semibold py-1">Last Name</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Last Name</label>
               <input
                 type="text"
                 placeholder="Doe"
                 value={guestLastName}
                 onChange={(e) => setGuestLastName(e.target.value)}
-                className="input input-bordered input-sm w-full"
+                className="input input-bordered input-sm w-full bg-white rounded-md"
                 required
               />
             </div>
             <div>
-              <label className="label text-xs font-semibold py-1">Email Address</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Email Address</label>
               <input
                 type="email"
                 placeholder="guest@example.com"
                 value={guestEmail}
                 onChange={(e) => setGuestEmail(e.target.value)}
-                className="input input-bordered input-sm w-full"
+                className="input input-bordered input-sm w-full bg-white rounded-md"
                 required
               />
             </div>
             <div>
-              <label className="label text-xs font-semibold py-1">Phone Number</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Phone Number</label>
               <input
                 type="tel"
                 placeholder="(555) 000-0000"
                 value={guestPhone}
                 onChange={(e) => setGuestPhone(e.target.value)}
-                className="input input-bordered input-sm w-full"
+                className="input input-bordered input-sm w-full font-mono bg-white rounded-md"
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-base-200">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1.5 border-t border-slate-200">
             <div>
-              <label className="label text-xs font-semibold py-1">RV / Rig Type</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">RV / Rig Type</label>
               <select
                 value={rvType}
                 onChange={(e) => setRvType(e.target.value)}
-                className="select select-bordered select-sm w-full"
+                className="select select-bordered select-sm w-full bg-white rounded-md"
               >
                 {RV_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -306,64 +308,65 @@ export function NewReservationModal({
               </select>
             </div>
             <div>
-              <label className="label text-xs font-semibold py-1">Rig Length (ft)</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Rig Length (ft)</label>
               <input
                 type="number"
                 min={0}
                 max={60}
                 value={rvLengthFt}
                 onChange={(e) => setRvLengthFt(Number(e.target.value))}
-                className="input input-bordered input-sm w-full font-mono"
+                className="input input-bordered input-sm w-full font-mono bg-white rounded-md"
               />
             </div>
             <div>
-              <label className="label text-xs font-semibold py-1">License Plate (optional)</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">License Plate (optional)</label>
               <input
                 type="text"
                 placeholder="CO-123X"
                 value={licensePlate}
-                onChange={(e) => setLicensePlate(e.target.value)}
-                className="input input-bordered input-sm w-full uppercase"
+                onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
+                className="input input-bordered input-sm w-full uppercase bg-white font-mono rounded-md"
               />
             </div>
           </div>
         </div>
 
         {/* Section 3: Billing & Optional Payment */}
-        <div className="p-4 rounded-xl border border-base-200 bg-base-100 space-y-4">
+        <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-2.5">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/70">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
+              <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
               3. Rate & Payment
-            </h4>
+            </div>
             <div className="text-right">
-              <span className="text-xs text-base-content/60">{pricing.numNights} Nights • Total: </span>
-              <span className="text-base font-bold text-emerald-600">
+              <span className="text-xs text-slate-500">{pricing.numNights} Nights • Total: </span>
+              <span className="text-base font-black text-emerald-600 font-mono">
                 {formatCurrency(pricing.totalAmount)}
               </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="label text-xs font-semibold py-1">Discount Code (optional)</label>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Discount Code (optional)</label>
               <input
                 type="text"
                 placeholder="GOODSAM, MILITARY"
                 value={discountCode}
                 onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                className="input input-bordered input-sm w-full uppercase"
+                className="input input-bordered input-sm w-full uppercase font-mono rounded-md"
               />
             </div>
 
             <div className="flex flex-col justify-end">
-              <label className="cursor-pointer label justify-start gap-3 py-1">
+              <label className="cursor-pointer label justify-start gap-2.5 py-1">
                 <input
                   type="checkbox"
                   checked={collectPaymentNow}
                   onChange={(e) => setCollectPaymentNow(e.target.checked)}
-                  className="checkbox checkbox-primary checkbox-sm"
+                  className="checkbox checkbox-primary checkbox-sm rounded"
                 />
-                <span className="label-text font-medium text-xs">
+                <span className="label-text font-bold text-xs text-slate-800">
                   Collect Full Payment Now ({formatCurrency(pricing.totalAmount)})
                 </span>
               </label>
@@ -371,9 +374,9 @@ export function NewReservationModal({
           </div>
 
           {collectPaymentNow && (
-            <div className="p-3 rounded-lg bg-base-200/50 flex items-center gap-4">
-              <span className="text-xs font-semibold">Payment Method:</span>
-              <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+            <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200 flex flex-wrap items-center gap-3.5">
+              <span className="text-xs font-bold text-slate-700">Payment Method:</span>
+              <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
                 <input
                   type="radio"
                   name="pm"
@@ -384,7 +387,7 @@ export function NewReservationModal({
                 />
                 Credit Card
               </label>
-              <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+              <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
                 <input
                   type="radio"
                   name="pm"
@@ -395,7 +398,7 @@ export function NewReservationModal({
                 />
                 Cash
               </label>
-              <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+              <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
                 <input
                   type="radio"
                   name="pm"
@@ -411,11 +414,11 @@ export function NewReservationModal({
         </div>
 
         {/* Footer CTAs */}
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm">
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm font-semibold rounded-md">
             Cancel
           </button>
-          <button type="submit" disabled={loading} className="btn btn-primary btn-sm min-w-[140px] shadow-sm">
+          <button type="submit" disabled={loading} className="btn btn-primary btn-sm min-w-[140px] font-bold rounded-md">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Booking"}
           </button>
         </div>
