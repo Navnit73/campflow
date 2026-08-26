@@ -17,6 +17,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const [selectedResId, setSelectedResId] = useState<string | null>(null);
   const [paymentRes, setPaymentRes] = useState<any | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -57,20 +58,42 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="drawer lg:drawer-open min-h-screen bg-slate-50">
-      <input id="dashboard-drawer" type="checkbox" className="drawer-toggle" />
-      <div className="drawer-content flex flex-col min-h-screen">
-        <DashboardNavbar
-          onOpenNewReservation={() => setIsNewBookingOpen(true)}
-          onRefreshData={() => setRefreshKey((k) => k + 1)}
-        />
-        <main className="flex-1 p-4 lg:p-6 overflow-y-auto max-w-[1600px] w-full mx-auto">
-          {children}
+    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+      {/* Top Full-Width Navbar */}
+      <DashboardNavbar
+        onOpenNewReservation={() => setIsNewBookingOpen(true)}
+        onRefreshData={() => setRefreshKey((k) => k + 1)}
+        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      />
+
+      {/* Main Body Viewport */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Desktop Sidebar (Pinned, 100% full height of remaining viewport) */}
+        <div className="hidden lg:flex shrink-0 h-full border-r border-slate-200 bg-white">
+          <Sidebar />
+        </div>
+
+        {/* Mobile Slide-out Drawer Overlay */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 z-50 lg:hidden flex bg-slate-900/50 backdrop-blur-xs animate-fade-in"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <div
+              className="relative w-64 max-w-[80vw] h-full bg-white shadow-xl animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Sidebar onCloseMobile={() => setIsMobileMenuOpen(false)} />
+            </div>
+          </div>
+        )}
+
+        {/* Scrollable Main Content Area */}
+        <main className="flex-1 h-full overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-7 custom-scrollbar">
+          <div className="max-w-[1600px] w-full mx-auto space-y-5 pb-10">
+            {children}
+          </div>
         </main>
-      </div>
-      <div className="drawer-side z-40">
-        <label htmlFor="dashboard-drawer" aria-label="close sidebar" className="drawer-overlay"></label>
-        <Sidebar />
       </div>
 
       {/* Global Modals */}

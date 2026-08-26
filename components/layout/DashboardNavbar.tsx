@@ -9,32 +9,34 @@ import {
   User,
   Menu,
   PlusCircle,
-  RefreshCw,
 } from "lucide-react";
 
 interface DashboardNavbarProps {
   onOpenNewReservation?: () => void;
   onRefreshData?: () => void;
+  onToggleMobileMenu?: () => void;
 }
 
 export function DashboardNavbar({
   onOpenNewReservation,
   onRefreshData,
+  onToggleMobileMenu,
 }: DashboardNavbarProps) {
   const { user, property, logout } = useAuth();
 
   return (
-    <header className="navbar bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 px-4 h-16 flex items-center justify-between text-slate-800">
-      {/* Left side: Hamburger on mobile + Brand */}
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 h-16 flex items-center justify-between text-slate-800 shrink-0">
+      {/* Left side: Mobile Menu Button + Brand */}
       <div className="flex items-center gap-3">
-        {/* Mobile menu drawer button */}
-        <label
-          htmlFor="dashboard-drawer"
-          className="btn btn-ghost btn-sm btn-square lg:hidden text-slate-600 hover:text-slate-900 rounded-md"
-          aria-label="Open navigation menu"
-        >
-          <Menu className="w-5 h-5" />
-        </label>
+        {onToggleMobileMenu && (
+          <button
+            onClick={onToggleMobileMenu}
+            className="btn btn-ghost btn-sm btn-square lg:hidden text-slate-600 hover:text-slate-900 rounded-md"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
 
         {/* Brand */}
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
@@ -58,10 +60,11 @@ export function DashboardNavbar({
         {onOpenNewReservation && (
           <button
             onClick={onOpenNewReservation}
-            className="hidden sm:inline-flex btn btn-primary btn-xs sm:btn-sm gap-1.5 font-bold rounded-md"
+            className="btn btn-primary btn-xs sm:btn-sm gap-1.5 font-bold rounded-md"
           >
             <PlusCircle className="w-3.5 h-3.5" />
-            New Booking
+            <span className="hidden sm:inline">New Booking</span>
+            <span className="sm:hidden">Book</span>
           </button>
         )}
 
@@ -77,7 +80,7 @@ export function DashboardNavbar({
         <div className="dropdown dropdown-end">
           <label
             tabIndex={0}
-            className="btn btn-ghost btn-sm gap-2 normal-case font-medium text-xs px-2 rounded-md hover:bg-slate-100"
+            className="btn btn-ghost btn-sm gap-2 normal-case font-medium text-xs px-2 rounded-md hover:bg-slate-100 cursor-pointer"
           >
             <div className="w-7 h-7 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs border border-emerald-300">
               {user?.name ? user.name[0].toUpperCase() : "U"}
