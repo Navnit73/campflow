@@ -1,19 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/components/ui/Toast";
-import apiClient from "@/lib/axios/client";
 import {
   ExternalLink,
-  Sparkles,
   User,
   LogOut,
   Menu,
   Trees,
   PlusCircle,
-  RefreshCw,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -21,31 +17,9 @@ interface NavbarProps {
   onRefreshData?: () => void;
 }
 
-export function DashboardNavbar({ onOpenNewReservation, onRefreshData }: NavbarProps) {
+export function DashboardNavbar({ onOpenNewReservation }: NavbarProps) {
   const { user, property, logout } = useAuth();
-  const { success, error } = useToast();
-  const [seeding, setSeeding] = useState(false);
-
-  const handleSeedDemo = async () => {
-    if (!confirm("Load realistic demo data for Pine Ridge RV Haven? (This will populate 24 sites, hookups, and active reservations)")) {
-      return;
-    }
-    setSeeding(true);
-    try {
-      const res = await apiClient.post("/api/seed");
-      if (res.data?.success) {
-        success("Pine Ridge RV demo data populated successfully!");
-        if (onRefreshData) onRefreshData();
-        window.location.reload();
-      }
-    } catch (err: any) {
-      error(err?.message || "Failed to seed demo data");
-    } finally {
-      setSeeding(false);
-    }
-  };
-
-  const bookingSlug = property?.slug || "pine-ridge-rv";
+  const bookingSlug = property?.slug || "campflow-rv-resort";
 
   return (
     <header className="navbar bg-base-100 border-b border-base-200 sticky top-0 z-30 px-4 lg:px-6 h-16">
@@ -77,21 +51,6 @@ export function DashboardNavbar({ onOpenNewReservation, onRefreshData }: NavbarP
 
       {/* Right Controls */}
       <div className="flex-none flex items-center gap-2 sm:gap-3">
-        {/* Seed Demo Data Button */}
-        <button
-          onClick={handleSeedDemo}
-          disabled={seeding}
-          className="btn btn-outline btn-xs sm:btn-sm btn-accent gap-1.5 font-medium shadow-2xs"
-          title="Populate complete RV park demo data"
-        >
-          {seeding ? (
-            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          )}
-          <span className="hidden sm:inline">Seed Demo</span>
-        </button>
-
         {/* Public Booking Link */}
         <Link
           href={`/book/${bookingSlug}`}

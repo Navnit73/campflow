@@ -31,20 +31,23 @@ export async function connectDB(): Promise<typeof mongoose> {
     let uri = process.env.MONGODB_URI;
 
     cached.promise = (async () => {
-      // 1. Try provided MONGODB_URI if available
+      // 1. If MONGODB_URI is provided, connect directly to it
       if (uri) {
         try {
-          const m = await mongoose.connect(uri, { ...opts, serverSelectionTimeoutMS: 2500 });
+          console.log("[MongoDB] Connecting to database URI...");
+          const m = await mongoose.connect(uri, { ...opts, serverSelectionTimeoutMS: 10000 });
+          console.log("[MongoDB] Connected successfully to MongoDB!");
           return m;
         } catch (err: any) {
-          console.warn("[MongoDB] Direct connection to MONGODB_URI failed, checking fallback:", err?.message || err);
+          console.error("[MongoDB] Connection to MONGODB_URI failed:", err?.message || err);
+          throw err;
         }
       }
 
-      // 2. In development or test, fallback to in-memory MongoDB if local MongoDB daemon is not running
+      // 2. Only if MONGODB_URI is absent in dev mode, fallback to in-memory MongoDB
       if (process.env.NODE_ENV !== "production") {
         try {
-          console.log("[MongoDB] Initializing MongoMemoryServer for zero-config local development...");
+          console.log("[MongoDB] MONGODB_URI not found. Initializing MongoMemoryServer for development...");
           const { MongoMemoryServer } = await import("mongodb-memory-server");
           if (!cached.memoryServer) {
             cached.memoryServer = await MongoMemoryServer.create();
@@ -59,7 +62,7 @@ export async function connectDB(): Promise<typeof mongoose> {
         }
       }
 
-      throw new Error("MONGODB_URI is not defined or could not be reached in production environment.");
+      throw new Error("MONGODB_URI is not defined in production environment.");
     })();
   }
 

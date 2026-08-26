@@ -26,7 +26,7 @@ import {
 export default function PublicBookingPage() {
   const params = useParams();
   const router = useRouter();
-  const slug = (params?.slug as string) || "pine-ridge-rv";
+  const slug = (params?.slug as string) || "campflow-rv-resort";
 
   // Step state: 1 = Search, 2 = Select Site, 3 = Guest Info & Pay
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -165,11 +165,11 @@ export default function PublicBookingPage() {
             </div>
             <div>
               <h1 className="font-bold text-lg leading-tight text-base-content">
-                {property?.name || "Pine Ridge RV Haven & Campground"}
+                {property?.name || "CampFlow RV Resort"}
               </h1>
               <p className="text-xs text-base-content/60 flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-emerald-600" />
-                {property?.address?.city || "Buena Vista"}, {property?.address?.state || "CO"}
+                {property?.address?.city || "Mountain View"}, {property?.address?.state || "CO"}
               </p>
             </div>
           </div>

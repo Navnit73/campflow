@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import apiClient from "@/lib/axios/client";
 import {
   Trees,
   CalendarDays,
@@ -12,34 +10,13 @@ import {
   ArrowRight,
   Sparkles,
   Smartphone,
-  Loader2,
   ShieldCheck,
   CreditCard,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 
 export default function HomePage() {
-  const router = useRouter();
-  const [seeding, setSeeding] = useState(false);
-
-  const handleLaunchDemo = async () => {
-    setSeeding(true);
-    try {
-      await apiClient.post("/api/seed");
-      const res = await apiClient.post("/api/auth/login", {
-        email: "demo@pineridgerv.com",
-        password: "password123",
-      });
-      if (res.data?.success && typeof window !== "undefined") {
-        localStorage.setItem("rv_auth_token", res.data.data.token);
-      }
-      router.push("/dashboard");
-    } catch {
-      router.push("/login");
-    } finally {
-      setSeeding(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-base-100 text-base-content flex flex-col justify-between">
       {/* Top Navbar */}
@@ -52,23 +29,13 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleLaunchDemo}
-            disabled={seeding}
-            className="btn btn-outline btn-sm btn-accent gap-1.5 font-bold shadow-2xs"
-          >
-            {seeding ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4 text-amber-500" />
-            )}
-            Launch Live Demo
-          </button>
-          <Link href="/login" className="btn btn-ghost btn-sm font-semibold">
+          <Link href="/login" className="btn btn-ghost btn-sm font-semibold gap-1.5">
+            <LogIn className="w-4 h-4" />
             Sign In
           </Link>
-          <Link href="/register" className="btn btn-primary btn-sm font-bold shadow-sm">
-            Get Started Free
+          <Link href="/register" className="btn btn-primary btn-sm font-bold shadow-sm gap-1.5">
+            <UserPlus className="w-4 h-4" />
+            Register Park
           </Link>
         </div>
       </header>
@@ -90,16 +57,15 @@ export default function HomePage() {
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-          <button
-            onClick={handleLaunchDemo}
-            disabled={seeding}
+          <Link
+            href="/login"
             className="btn btn-primary btn-md gap-2 font-bold px-8 shadow-md text-base"
           >
-            {seeding ? <Loader2 className="w-5 h-5 animate-spin" /> : "Explore Live Interactive Demo"}
+            Sign In to Front Desk
             <ArrowRight className="w-4 h-4" />
-          </button>
-          <Link href="/book/pine-ridge-rv" className="btn btn-outline btn-md gap-2 font-semibold">
-            View Guest Booking Portal ↗
+          </Link>
+          <Link href="/book/campflow-rv-resort" className="btn btn-outline btn-md gap-2 font-semibold">
+            View Online Booking Engine ↗
           </Link>
         </div>
 

@@ -17,9 +17,9 @@ export default function SettingsPage() {
   const { user, property, organization } = useAuth();
   const { success } = useToast();
 
-  const [propName, setPropName] = useState(property?.name || "Pine Ridge RV Haven");
-  const [phone, setPhone] = useState(property?.phone || "(719) 555-0199");
-  const [email, setEmail] = useState(property?.email || "stay@pineridgerv.com");
+  const [propName, setPropName] = useState(property?.name || "CampFlow RV Resort");
+  const [phone, setPhone] = useState(property?.phone || "(555) 234-5678");
+  const [email, setEmail] = useState(property?.email || "admin@campflow.com");
   const [checkInTime, setCheckInTime] = useState(property?.checkInTime || "13:00");
   const [checkOutTime, setCheckOutTime] = useState(property?.checkOutTime || "11:00");
   const [taxRate, setTaxRate] = useState(property?.taxRatePercent ?? 7.5);
@@ -65,7 +65,7 @@ export default function SettingsPage() {
               <label className="label text-xs font-semibold py-1">Public URL Slug</label>
               <input
                 type="text"
-                value={property?.slug || "pine-ridge-rv"}
+                value={property?.slug || "campflow-rv-resort"}
                 disabled
                 className="input input-bordered input-sm w-full font-mono bg-base-200/50"
               />

@@ -5,12 +5,14 @@ import apiClient from "@/lib/axios/client";
 import { useToast } from "@/components/ui/Toast";
 import { HookupIcons } from "@/components/ui/HookupIcons";
 import { formatCurrency, formatHookup, formatRigType } from "@/lib/utils/format";
+import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
   RefreshCw,
   Plus,
+  PlusCircle,
   Info,
 } from "lucide-react";
 
@@ -213,8 +215,12 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
               Loading tape chart calendar...
             </div>
           ) : chartData.sites.length === 0 ? (
-            <div className="p-12 text-center text-base-content/60">
-              No sites configured yet. Go to Sites & Hookups to add your campground sites.
+            <div className="p-12 text-center text-base-content/60 space-y-3">
+              <p className="text-sm">No sites created yet in your campground inventory.</p>
+              <Link href="/sites" className="btn btn-primary btn-sm gap-1.5 font-bold shadow-xs">
+                <PlusCircle className="w-4 h-4" />
+                Add Your First Site
+              </Link>
             </div>
           ) : (
             chartData.sites.map((site) => {

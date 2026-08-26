@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/Toast";
-import apiClient from "@/lib/axios/client";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,7 +15,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [seeding, setSeeding] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,20 +30,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemoLogin = async () => {
-    setSeeding(true);
-    try {
-      await apiClient.post("/api/seed");
-      await login({ email: "demo@pineridgerv.com", password: "password123" });
-      success("Pine Ridge RV demo account activated!");
-      router.push("/dashboard");
-    } catch (err: any) {
-      error(err?.message || "Failed to load demo login");
-    } finally {
-      setSeeding(false);
-    }
-  };
-
   return (
     <div className="card bg-base-100 shadow-xl border border-base-200 p-6 sm:p-8 space-y-6">
       <div className="text-center space-y-1">
@@ -57,29 +41,12 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* 1-Click Demo Button */}
-      <button
-        type="button"
-        onClick={handleQuickDemoLogin}
-        disabled={seeding || loading}
-        className="btn btn-outline btn-accent w-full gap-2 font-bold shadow-2xs"
-      >
-        {seeding ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Sparkles className="w-4 h-4 text-amber-500" />
-        )}
-        1-Click Demo Login (Pine Ridge RV)
-      </button>
-
-      <div className="divider text-xs text-base-content/40 my-1">OR SIGN IN WITH EMAIL</div>
-
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="label text-xs font-semibold py-1">Email Address</label>
           <input
             type="email"
-            placeholder="demo@pineridgerv.com"
+            placeholder="admin@campflow.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="input input-bordered input-sm sm:input-md w-full"
@@ -103,10 +70,11 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          disabled={loading || seeding}
-          className="btn btn-primary w-full mt-2 font-bold shadow-sm"
+          disabled={loading}
+          className="btn btn-primary w-full mt-2 font-bold shadow-sm gap-2"
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+          Sign In
         </button>
       </form>
 
