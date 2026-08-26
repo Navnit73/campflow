@@ -1,0 +1,74 @@
+import mongoose from "mongoose";
+
+interface MongooseCache {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+  memoryServer?: any;
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var mongooseCache: MongooseCache | undefined;
+}
+
+let cached: MongooseCache = global.mongooseCache || { conn: null, promise: null };
+
+if (!global.mongooseCache) {
+  global.mongooseCache = cached;
+}
+
+export async function connectDB(): Promise<typeof mongoose> {
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts: mongoose.ConnectOptions = {
+      bufferCommands: false,
+      maxPoolSize: 10,
+    };
+
+    let uri = process.env.MONGODB_URI;
+
+    cached.promise = (async () => {
+      // 1. Try provided MONGODB_URI if available
+      if (uri) {
+        try {
+          const m = await mongoose.connect(uri, { ...opts, serverSelectionTimeoutMS: 2500 });
+          return m;
+        } catch (err: any) {
+          console.warn("[MongoDB] Direct connection to MONGODB_URI failed, checking fallback:", err?.message || err);
+        }
+      }
+
+      // 2. In development or test, fallback to in-memory MongoDB if local MongoDB daemon is not running
+      if (process.env.NODE_ENV !== "production") {
+        try {
+          console.log("[MongoDB] Initializing MongoMemoryServer for zero-config local development...");
+          const { MongoMemoryServer } = await import("mongodb-memory-server");
+          if (!cached.memoryServer) {
+            cached.memoryServer = await MongoMemoryServer.create();
+          }
+          const memUri = cached.memoryServer.getUri();
+          console.log("[MongoDB] Connected to in-memory database instance:", memUri);
+          const m = await mongoose.connect(memUri, opts);
+          return m;
+        } catch (memErr) {
+          console.error("[MongoDB] Failed to start MongoMemoryServer fallback:", memErr);
+          throw memErr;
+        }
+      }
+
+      throw new Error("MONGODB_URI is not defined or could not be reached in production environment.");
+    })();
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+
+  return cached.conn;
+}
