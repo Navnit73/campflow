@@ -36,7 +36,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="surface-card p-6 sm:p-8 space-y-6 shadow-xl border border-slate-200">
+    <div className="bg-white/90 backdrop-blur-xl p-6 sm:p-8 space-y-6 shadow-2xl border border-white/30 rounded-2xl">
       <div className="text-center space-y-1.5">
         <h2 className="text-2xl font-black text-slate-900 tracking-tight">
           Sign In to CampFlow
@@ -58,7 +58,7 @@ export default function LoginPage() {
               placeholder="admin@campflow.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="input input-bordered input-md w-full pl-10 text-sm font-medium bg-slate-50/50 focus:bg-white focus:border-emerald-600"
+              className="input input-bordered input-md w-full pl-10 text-sm font-medium bg-white/70 focus:bg-white focus:border-emerald-600"
               required
             />
           </div>
@@ -77,7 +77,7 @@ export default function LoginPage() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input input-bordered input-md w-full pl-10 text-sm bg-slate-50/50 focus:bg-white focus:border-emerald-600"
+              className="input input-bordered input-md w-full pl-10 text-sm bg-white/70 focus:bg-white focus:border-emerald-600"
               required
             />
           </div>
@@ -93,19 +93,7 @@ export default function LoginPage() {
         </button>
       </form>
 
-      {/* Demo Credentials Helper Pill */}
-      <div className="p-3 rounded-xl bg-slate-100/70 border border-slate-200/80 flex items-center justify-between text-xs">
-        <div className="text-slate-600 font-medium">
-          <span className="font-bold text-slate-800">Demo Account:</span> admin@campflow.com
-        </div>
-        <button
-          type="button"
-          onClick={handleDemoFill}
-          className="btn btn-ghost btn-xs text-emerald-700 font-bold hover:bg-emerald-50"
-        >
-          Auto-Fill
-        </button>
-      </div>
+     
 
       <div className="text-center text-xs text-slate-600 pt-1">
         Don&apos;t have an account?{" "}

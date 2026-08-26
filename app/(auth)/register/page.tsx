@@ -45,7 +45,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="surface-card p-6 sm:p-8 space-y-6 shadow-xl border border-slate-200">
+    <div className="bg-white/90 backdrop-blur-xl p-6 sm:p-8 space-y-6 shadow-2xl border border-white/30 rounded-2xl">
       <div className="text-center space-y-1.5">
         <h2 className="text-2xl font-black text-slate-900 tracking-tight">
           Create Your Campground Account
@@ -67,7 +67,7 @@ export default function RegisterPage() {
               placeholder="Whispering Pines RV Resort"
               value={organizationName}
               onChange={(e) => setOrganizationName(e.target.value)}
-              className="input input-bordered input-md w-full pl-10 text-sm font-semibold bg-slate-50/50 focus:bg-white focus:border-emerald-600"
+              className="input input-bordered input-md w-full pl-10 text-sm font-semibold bg-white/70 focus:bg-white focus:border-emerald-600"
               required
             />
           </div>
@@ -84,7 +84,7 @@ export default function RegisterPage() {
               placeholder="Sarah Jenkins"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="input input-bordered input-md w-full pl-10 text-sm bg-slate-50/50 focus:bg-white focus:border-emerald-600"
+              className="input input-bordered input-md w-full pl-10 text-sm bg-white/70 focus:bg-white focus:border-emerald-600"
               required
             />
           </div>
@@ -102,7 +102,7 @@ export default function RegisterPage() {
                 placeholder="sarah@park.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input input-bordered input-md w-full pl-9 text-xs sm:text-sm bg-slate-50/50 focus:bg-white focus:border-emerald-600"
+                className="input input-bordered input-md w-full pl-9 text-xs sm:text-sm bg-white/70 focus:bg-white focus:border-emerald-600"
                 required
               />
             </div>
@@ -119,7 +119,7 @@ export default function RegisterPage() {
                 placeholder="(555) 000-0000"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="input input-bordered input-md w-full pl-9 text-xs sm:text-sm font-mono bg-slate-50/50 focus:bg-white focus:border-emerald-600"
+                className="input input-bordered input-md w-full pl-9 text-xs sm:text-sm font-mono bg-white/70 focus:bg-white focus:border-emerald-600"
                 required
               />
             </div>
@@ -137,7 +137,7 @@ export default function RegisterPage() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input input-bordered input-md w-full pl-10 text-sm bg-slate-50/50 focus:bg-white focus:border-emerald-600"
+              className="input input-bordered input-md w-full pl-10 text-sm bg-white/70 focus:bg-white focus:border-emerald-600"
               required
             />
           </div>
