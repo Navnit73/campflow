@@ -11,6 +11,15 @@ export const inlineGuestSchema = z.object({
   licensePlate: z.string().optional().default(""),
 });
 
+export const reservationAddOnItemSchema = z.object({
+  addOnId: z.string().optional(),
+  name: z.string().min(1, "Add-on name is required"),
+  price: z.coerce.number().min(0, "Price cannot be negative"),
+  pricingType: z.enum(["per_stay", "per_night", "per_unit", "per_person"]).default("per_stay"),
+  quantity: z.coerce.number().min(1).default(1),
+  taxable: z.boolean().optional().default(true),
+});
+
 export const createReservationSchema = z
   .object({
     siteId: z.string().min(1, "Site is required"),
@@ -21,6 +30,7 @@ export const createReservationSchema = z
     adults: z.coerce.number().min(1).default(2),
     children: z.coerce.number().min(0).default(0),
     pets: z.coerce.number().min(0).default(0),
+    addOns: z.array(reservationAddOnItemSchema).optional().default([]),
     discountCode: z.string().optional(),
     status: z.enum(RESERVATION_STATUSES).default("confirmed"),
     source: z.enum(RESERVATION_SOURCES).default("admin"),
@@ -50,6 +60,7 @@ export const updateReservationSchema = z.object({
   adults: z.coerce.number().min(1).optional(),
   children: z.coerce.number().min(0).optional(),
   pets: z.coerce.number().min(0).optional(),
+  addOns: z.array(reservationAddOnItemSchema).optional(),
   status: z.enum(RESERVATION_STATUSES).optional(),
   specialRequests: z.string().optional(),
   notes: z.string().optional(),

@@ -38,9 +38,19 @@ export interface IReservation extends Document {
   children: number;
   pets: number;
   status: ReservationStatus;
+  addOns?: Array<{
+    addOnId?: mongoose.Types.ObjectId;
+    name: string;
+    price: number;
+    pricingType: "per_stay" | "per_night" | "per_unit" | "per_person";
+    quantity: number;
+    subtotal: number;
+    taxable: boolean;
+  }>;
   pricing: {
     nightlyRate: number;
     baseSubtotal: number;
+    addOnsSubtotal?: number;
     discountAmount: number;
     taxAmount: number;
     totalAmount: number;
@@ -144,9 +154,25 @@ const ReservationSchema = new Schema<IReservation>(
       default: "confirmed",
       required: true,
     },
+    addOns: [
+      {
+        addOnId: { type: Schema.Types.ObjectId, ref: "AddOn" },
+        name: { type: String, required: true },
+        price: { type: Number, required: true },
+        pricingType: {
+          type: String,
+          enum: ["per_stay", "per_night", "per_unit", "per_person"],
+          default: "per_stay",
+        },
+        quantity: { type: Number, default: 1 },
+        subtotal: { type: Number, required: true },
+        taxable: { type: Boolean, default: true },
+      },
+    ],
     pricing: {
       nightlyRate: { type: Number, required: true },
       baseSubtotal: { type: Number, required: true },
+      addOnsSubtotal: { type: Number, default: 0 },
       discountAmount: { type: Number, default: 0 },
       taxAmount: { type: Number, default: 0 },
       totalAmount: { type: Number, required: true },

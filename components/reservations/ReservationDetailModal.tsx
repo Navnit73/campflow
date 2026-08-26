@@ -20,6 +20,9 @@ import {
   DollarSign,
   RefreshCw,
   Edit2,
+  Sparkles,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { EditReservationModal } from "@/components/reservations/EditReservationModal";
 
@@ -44,6 +47,12 @@ export function ReservationDetailModal({
   const [actionLoading, setActionLoading] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
+  // Quick Add-On to Folio State
+  const [availableAddOns, setAvailableAddOns] = useState<any[]>([]);
+  const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
+  const [selectedAddOnId, setSelectedAddOnId] = useState("");
+  const [addOnQuantity, setAddOnQuantity] = useState(1);
+
   const fetchDetails = async () => {
     if (!reservationId) return;
     setLoading(true);
@@ -60,11 +69,27 @@ export function ReservationDetailModal({
     }
   };
 
+  const fetchActiveAddOns = async () => {
+    try {
+      const res = await apiClient.get("/api/addons?isActive=true");
+      if (res.data?.success) {
+        setAvailableAddOns(res.data.data || []);
+        if (res.data.data.length > 0 && !selectedAddOnId) {
+          setSelectedAddOnId(res.data.data[0]._id);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     if (isOpen && reservationId) {
       fetchDetails();
+      fetchActiveAddOns();
     } else {
       setData(null);
+      setIsAddServiceOpen(false);
     }
   }, [isOpen, reservationId]);
 
@@ -88,7 +113,13 @@ export function ReservationDetailModal({
   const handleCheckOut = async () => {
     if (!reservationId) return;
     if (data?.pricing?.balanceDue > 0) {
-      if (!confirm(`Warning: Guest still has an unpaid balance of ${formatCurrency(data.pricing.balanceDue)}. Proceed with check-out?`)) {
+      if (
+        !confirm(
+          `Warning: Guest still has an unpaid balance of ${formatCurrency(
+            data.pricing.balanceDue
+          )}. Proceed with check-out?`
+        )
+      ) {
         return;
       }
     }
@@ -114,7 +145,9 @@ export function ReservationDetailModal({
 
     setActionLoading(true);
     try {
-      const res = await apiClient.post(`/api/reservations/${reservationId}/cancel`, { notes: reason });
+      const res = await apiClient.post(`/api/reservations/${reservationId}/cancel`, {
+        notes: reason,
+      });
       if (res.data?.success) {
         success("Reservation cancelled.");
         fetchDetails();
@@ -122,6 +155,93 @@ export function ReservationDetailModal({
       }
     } catch (err: any) {
       error(err?.message || "Failed to cancel reservation");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAddServiceToFolio = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAddOnId || !data) return;
+
+    const chosen = availableAddOns.find((a) => a._id === selectedAddOnId);
+    if (!chosen) return;
+
+    setActionLoading(true);
+    try {
+      const currentAddOns = (data.addOns || []).map((a: any) => ({
+        addOnId: a.addOnId?._id || a.addOnId || undefined,
+        name: a.name,
+        price: a.price,
+        pricingType: a.pricingType,
+        quantity: a.quantity,
+        taxable: a.taxable,
+      }));
+
+      // Check if already in list -> increment quantity, else append
+      const existingIdx = currentAddOns.findIndex(
+        (a: any) => a.addOnId === chosen._id || a.name === chosen.name
+      );
+
+      if (existingIdx >= 0) {
+        currentAddOns[existingIdx].quantity += Number(addOnQuantity);
+      } else {
+        currentAddOns.push({
+          addOnId: chosen._id,
+          name: chosen.name,
+          price: chosen.price,
+          pricingType: chosen.pricingType,
+          quantity: Number(addOnQuantity),
+          taxable: chosen.taxable,
+        });
+      }
+
+      const res = await apiClient.patch(`/api/reservations/${data._id}`, {
+        addOns: currentAddOns,
+      });
+
+      if (res.data?.success) {
+        success(`Added "${chosen.name}" (x${addOnQuantity}) to folio!`);
+        setIsAddServiceOpen(false);
+        setAddOnQuantity(1);
+        fetchDetails();
+        onUpdated();
+      }
+    } catch (err: any) {
+      error(err?.message || "Failed to add service to folio");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRemoveAddOn = async (index: number) => {
+    if (!data || !data.addOns) return;
+    if (!confirm(`Remove "${data.addOns[index].name}" from this folio?`)) return;
+
+    setActionLoading(true);
+    try {
+      const updated = data.addOns
+        .filter((_: any, i: number) => i !== index)
+        .map((a: any) => ({
+          addOnId: a.addOnId?._id || a.addOnId || undefined,
+          name: a.name,
+          price: a.price,
+          pricingType: a.pricingType,
+          quantity: a.quantity,
+          taxable: a.taxable,
+        }));
+
+      const res = await apiClient.patch(`/api/reservations/${data._id}`, {
+        addOns: updated,
+      });
+
+      if (res.data?.success) {
+        success("Service removed from folio.");
+        fetchDetails();
+        onUpdated();
+      }
+    } catch (err: any) {
+      error(err?.message || "Failed to remove service");
     } finally {
       setActionLoading(false);
     }
@@ -286,6 +406,147 @@ export function ReservationDetailModal({
             </div>
           </div>
 
+          {/* Add-On Services & Folio Extras Section */}
+          <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider text-slate-700">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                Services & Add-Ons Folio ({(data.addOns || []).length})
+              </div>
+
+              {data.status !== "cancelled" && data.status !== "checked_out" && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddServiceOpen(!isAddServiceOpen)}
+                  className="btn btn-outline btn-xs gap-1 font-bold text-emerald-700 hover:bg-emerald-50 rounded"
+                >
+                  <Plus className="w-3 h-3" />
+                  Charge Service to Folio
+                </button>
+              )}
+            </div>
+
+            {/* Inline Quick Add Form */}
+            {isAddServiceOpen && (
+              <form
+                onSubmit={handleAddServiceToFolio}
+                className="p-3 rounded-lg bg-emerald-50/50 border border-emerald-200 flex flex-wrap items-end gap-2.5"
+              >
+                <div className="flex-1 min-w-[200px]">
+                  <label className="label text-[11px] font-bold text-emerald-900 py-0.5">
+                    Select Add-On Service
+                  </label>
+                  <select
+                    value={selectedAddOnId}
+                    onChange={(e) => setSelectedAddOnId(e.target.value)}
+                    className="select select-bordered select-xs w-full bg-white rounded font-medium"
+                    required
+                  >
+                    {availableAddOns.map((a) => (
+                      <option key={a._id} value={a._id}>
+                        {a.name} — {formatCurrency(a.price)} (
+                        {a.pricingType === "per_night"
+                          ? "/nt"
+                          : a.pricingType === "per_person"
+                          ? "/person"
+                          : a.pricingType === "per_unit"
+                          ? "/unit"
+                          : "flat"}
+                        )
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="w-20">
+                  <label className="label text-[11px] font-bold text-emerald-900 py-0.5">
+                    Qty
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={addOnQuantity}
+                    onChange={(e) => setAddOnQuantity(Number(e.target.value))}
+                    className="input input-bordered input-xs w-full bg-white rounded font-mono text-center"
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 pb-0.5">
+                  <button
+                    type="submit"
+                    disabled={actionLoading}
+                    className="btn btn-primary btn-xs font-bold rounded"
+                  >
+                    Add to Folio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddServiceOpen(false)}
+                    className="btn btn-ghost btn-xs font-semibold text-slate-600 rounded"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Add-ons List */}
+            {data.addOns && data.addOns.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="table table-xs">
+                  <thead>
+                    <tr className="text-slate-500">
+                      <th>Service</th>
+                      <th>Billing Model</th>
+                      <th className="text-center">Qty</th>
+                      <th className="text-right">Unit Rate</th>
+                      <th className="text-right">Subtotal</th>
+                      <th className="w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.addOns.map((addon: any, idx: number) => (
+                      <tr key={idx}>
+                        <td className="font-bold text-slate-800">{addon.name}</td>
+                        <td className="text-[11px] text-slate-500 capitalize">
+                          {addon.pricingType?.replace("_", " ")}
+                        </td>
+                        <td className="text-center font-mono font-bold text-slate-700">
+                          {addon.quantity}
+                        </td>
+                        <td className="text-right font-mono text-slate-600">
+                          {formatCurrency(addon.price)}
+                        </td>
+                        <td className="text-right font-mono font-bold text-emerald-800">
+                          {formatCurrency(addon.subtotal)}
+                        </td>
+                        <td className="text-right">
+                          {data.status !== "cancelled" && data.status !== "checked_out" && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveAddOn(idx)}
+                              disabled={actionLoading}
+                              className="btn btn-ghost btn-xs btn-circle text-slate-400 hover:text-rose-600"
+                              title="Remove item"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-2 text-xs text-slate-400 font-medium">
+                No add-on services or extras attached to this reservation.
+              </div>
+            )}
+          </div>
+
           {/* Pricing & Financial Breakdown */}
           <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-2.5">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -298,11 +559,17 @@ export function ReservationDetailModal({
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
               <div>
-                <div className="text-xs text-slate-500 font-semibold">Subtotal</div>
+                <div className="text-xs text-slate-500 font-semibold">Lodging</div>
                 <div className="font-bold text-slate-800 font-mono text-xs sm:text-sm">
                   {formatCurrency(data.pricing?.baseSubtotal)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 font-semibold">Services & Add-ons</div>
+                <div className="font-bold text-emerald-800 font-mono text-xs sm:text-sm">
+                  +{formatCurrency(data.pricing?.addOnsSubtotal || 0)}
                 </div>
               </div>
               <div>

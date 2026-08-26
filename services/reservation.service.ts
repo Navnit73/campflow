@@ -230,10 +230,12 @@ export class ReservationService {
       nightlyRate: site.currentBaseRate,
       checkInDate: dIn,
       checkOutDate: dOut,
+      adults: input.adults || 2,
       taxRatePercent: taxRate,
       discountType: discountDoc?.type,
       discountValue: discountDoc?.value,
       paidAmount: input.initialPayment ? input.initialPayment.amount : 0,
+      addOns: input.addOns,
     });
 
     // 4. Generate unique confirmation code
@@ -267,6 +269,15 @@ export class ReservationService {
       adults: input.adults || 2,
       children: input.children || 0,
       pets: input.pets || 0,
+      addOns: pricing.calculatedAddOns.map((a) => ({
+        addOnId: a.addOnId ? new mongoose.Types.ObjectId(a.addOnId) : undefined,
+        name: a.name,
+        price: a.price,
+        pricingType: a.pricingType,
+        quantity: a.quantity,
+        subtotal: a.subtotal,
+        taxable: a.taxable,
+      })),
       status: input.status || "confirmed",
       pricing,
       discountId: discountDoc?._id,
@@ -414,8 +425,21 @@ export class ReservationService {
 
       reservation.checkInDate = newCheckIn;
       reservation.checkOutDate = newCheckOut;
+    }
 
-      // Recalculate pricing
+    if (input.adults !== undefined) reservation.adults = input.adults;
+    if (input.children !== undefined) reservation.children = input.children;
+    if (input.pets !== undefined) reservation.pets = input.pets;
+
+    // Recalculate pricing if dates, site, adults, discount, or addOns changed
+    if (
+      input.siteId ||
+      input.checkInDate ||
+      input.checkOutDate ||
+      input.adults !== undefined ||
+      input.discountCode !== undefined ||
+      input.addOns !== undefined
+    ) {
       const property = await Property.findById(propertyId).lean();
       let discountDoc: any = null;
       if (input.discountCode || reservation.discountCode) {
@@ -426,18 +450,39 @@ export class ReservationService {
         }).lean();
       }
 
+      const effectiveAddOns = input.addOns !== undefined ? input.addOns : (reservation.addOns || []);
+
       const pricing = calculatePricing({
         nightlyRate: reservation.siteSnapshot.baseRate,
-        checkInDate: newCheckIn,
-        checkOutDate: newCheckOut,
+        checkInDate: reservation.checkInDate,
+        checkOutDate: reservation.checkOutDate,
+        adults: reservation.adults,
         taxRatePercent: property?.taxRatePercent || 0,
         discountType: discountDoc?.type,
         discountValue: discountDoc?.value,
         paidAmount: reservation.pricing.paidAmount,
+        addOns: effectiveAddOns.map((a: any) => ({
+          addOnId: a.addOnId?.toString() || a.addOnId,
+          name: a.name,
+          price: a.price,
+          pricingType: a.pricingType,
+          quantity: a.quantity,
+          taxable: a.taxable,
+        })),
       });
 
       reservation.numNights = pricing.numNights;
       reservation.pricing = pricing;
+      reservation.addOns = pricing.calculatedAddOns.map((a) => ({
+        addOnId: a.addOnId ? new mongoose.Types.ObjectId(a.addOnId) : undefined,
+        name: a.name,
+        price: a.price,
+        pricingType: a.pricingType,
+        quantity: a.quantity,
+        subtotal: a.subtotal,
+        taxable: a.taxable,
+      })) as any;
+
       if (discountDoc) {
         reservation.discountId = discountDoc._id;
         reservation.discountCode = discountDoc.code;
@@ -454,9 +499,6 @@ export class ReservationService {
       };
     }
 
-    if (input.adults !== undefined) reservation.adults = input.adults;
-    if (input.children !== undefined) reservation.children = input.children;
-    if (input.pets !== undefined) reservation.pets = input.pets;
     if (input.status !== undefined) reservation.status = input.status;
     if (input.specialRequests !== undefined) reservation.specialRequests = input.specialRequests;
     if (input.notes !== undefined) reservation.notes = input.notes;

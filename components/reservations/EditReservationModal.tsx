@@ -8,7 +8,19 @@ import { RV_TYPES, RESERVATION_STATUSES } from "@/lib/constants";
 import { calculatePricing } from "@/lib/utils/pricing";
 import { formatCurrency, formatRvType } from "@/lib/utils/format";
 import { parseDateOnly, formatDateKey, addDaysStr } from "@/lib/utils/date";
-import { Loader2, Calendar, User, CreditCard, MapPin, Truck, AlertTriangle, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  Calendar,
+  User,
+  CreditCard,
+  MapPin,
+  Truck,
+  AlertTriangle,
+  AlertCircle,
+  Sparkles,
+  Plus,
+  Minus,
+} from "lucide-react";
 
 interface EditReservationModalProps {
   isOpen: boolean;
@@ -26,6 +38,7 @@ export function EditReservationModal({
   const { success, error } = useToast();
   const [loading, setLoading] = useState(false);
   const [sites, setSites] = useState<any[]>([]);
+  const [availableAddOns, setAvailableAddOns] = useState<any[]>([]);
   const [availabilityMap, setAvailabilityMap] = useState<Record<string, { isAvailable: boolean; conflictReason: string | null }>>({});
 
   // Form States
@@ -40,6 +53,9 @@ export function EditReservationModal({
   const [specialRequests, setSpecialRequests] = useState("");
   const [notes, setNotes] = useState("");
 
+  // Selected Add-Ons: { [addOnId or name]: quantity }
+  const [selectedAddOns, setSelectedAddOns] = useState<Record<string, number>>({});
+
   // Guest Snapshot
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
@@ -47,12 +63,18 @@ export function EditReservationModal({
   const [rvType, setRvType] = useState<string>("travel_trailer");
   const [rvLengthFt, setRvLengthFt] = useState<number | string>(30);
 
-  // Load sites
+  // Load sites & add-ons
   useEffect(() => {
     if (isOpen) {
       apiClient.get("/api/sites").then((res) => {
         if (res.data?.success) {
           setSites(res.data.data);
+        }
+      });
+
+      apiClient.get("/api/addons?isActive=true").then((res) => {
+        if (res.data?.success) {
+          setAvailableAddOns(res.data.data || []);
         }
       });
     }
@@ -78,6 +100,16 @@ export function EditReservationModal({
       setGuestPhone(reservation.guestSnapshot?.phone || "");
       setRvType(reservation.guestSnapshot?.rvType || "travel_trailer");
       setRvLengthFt(reservation.guestSnapshot?.rvLengthFt ?? 30);
+
+      // Populate existing add-ons
+      const addOnMap: Record<string, number> = {};
+      if (reservation.addOns && Array.isArray(reservation.addOns)) {
+        reservation.addOns.forEach((a: any) => {
+          const key = a.addOnId?.toString() || a.name;
+          addOnMap[key] = a.quantity || 1;
+        });
+      }
+      setSelectedAddOns(addOnMap);
     }
   }, [reservation, isOpen]);
 
@@ -115,6 +147,33 @@ export function EditReservationModal({
     }
   };
 
+  const handleToggleAddOn = (addon: any) => {
+    const key = addon._id || addon.name;
+    setSelectedAddOns((prev) => {
+      const current = prev[key] || 0;
+      if (current > 0) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: 1 };
+    });
+  };
+
+  const handleUpdateAddOnQty = (addon: any, delta: number) => {
+    const key = addon._id || addon.name;
+    setSelectedAddOns((prev) => {
+      const current = prev[key] || 0;
+      const nextVal = Math.max(0, current + delta);
+      if (nextVal === 0) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: nextVal };
+    });
+  };
+
   // Selected site for compatibility checking
   const selectedSite = sites.find((s) => s._id === siteId);
   const maxRig = selectedSite?.siteTypeSnapshot?.maxRigLength ?? 45;
@@ -122,13 +181,27 @@ export function EditReservationModal({
   const isSiteAvailable = availabilityMap[siteId]?.isAvailable ?? true;
   const conflictReason = availabilityMap[siteId]?.conflictReason;
 
+  // Build applied add-ons
+  const appliedAddOns = availableAddOns
+    .filter((a) => (selectedAddOns[a._id] || selectedAddOns[a.name] || 0) > 0)
+    .map((a) => ({
+      addOnId: a._id,
+      name: a.name,
+      price: a.price,
+      pricingType: a.pricingType,
+      quantity: selectedAddOns[a._id] || selectedAddOns[a.name] || 1,
+      taxable: a.taxable,
+    }));
+
   // Recalculate estimated pricing
   const pricing = calculatePricing({
     nightlyRate: selectedSite?.currentBaseRate || reservation?.pricing?.nightlyRate || 50,
     checkInDate,
     checkOutDate: checkOutDate > checkInDate ? checkOutDate : checkInDate,
+    adults: Number(adults) || 2,
     taxRatePercent: 7.5,
     paidAmount: reservation?.pricing?.paidAmount || 0,
+    addOns: appliedAddOns,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,6 +225,7 @@ export function EditReservationModal({
         discountCode: discountCode || undefined,
         specialRequests,
         notes,
+        addOns: appliedAddOns,
         guestSnapshot: {
           fullName: guestName,
           email: guestEmail,
@@ -180,53 +254,24 @@ export function EditReservationModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Edit Reservation (${reservation.confirmationCode})`}
-      subtitle="Modify stay dates, change site assignment, or update guest details"
-      maxWidth="max-w-2xl"
+      title={`Edit Reservation: ${reservation.confirmationCode}`}
+      subtitle="Modify stay dates, site assignment, add-on services, or camper details"
+      maxWidth="max-w-3xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Section 1: Site & Dates */}
+        {/* Section 1: Site, Status & Dates */}
         <div className="p-3 sm:p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
-          <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700 pb-1 border-b border-slate-200/60">
-            <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            1. Site & Stay Dates
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="w-full">
-              <label className="label text-xs font-bold text-slate-700 py-0.5">Assigned Site</label>
-              <select
-                value={siteId}
-                onChange={(e) => setSiteId(e.target.value)}
-                className={`select select-bordered select-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm ${
-                  !isSiteAvailable ? "border-rose-400 focus:border-rose-500" : ""
-                }`}
-                required
-              >
-                {sites.map((s) => {
-                  const avail = availabilityMap[s._id];
-                  const isAvail = avail ? avail.isAvailable : true;
-                  const labelSuffix = avail
-                    ? isAvail
-                      ? "✓ Available"
-                      : `✗ ${avail.conflictReason || "Unavailable"}`
-                    : "";
-
-                  return (
-                    <option key={s._id} value={s._id} disabled={avail && !isAvail}>
-                      Site {s.siteNumber} — {s.siteTypeSnapshot?.name} ({formatCurrency(s.currentBaseRate)}/nt) {labelSuffix ? `• ${labelSuffix}` : ""}
-                    </option>
-                  );
-                })}
-              </select>
+          <div className="flex items-center justify-between pb-1 border-b border-slate-200/60">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
+              <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              1. Site & Reservation Status
             </div>
-
-            <div className="w-full">
-              <label className="label text-xs font-bold text-slate-700 py-0.5">Booking Status</label>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold text-slate-700">Status:</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="select select-bordered select-sm w-full capitalize bg-white rounded-md text-xs sm:text-sm"
+                className="select select-bordered select-xs font-bold capitalize bg-white rounded"
               >
                 {RESERVATION_STATUSES.map((st) => (
                   <option key={st} value={st}>
@@ -237,17 +282,53 @@ export function EditReservationModal({
             </div>
           </div>
 
+          {/* Site selection */}
+          <div className="w-full">
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Campground Site</label>
+            <select
+              value={siteId}
+              onChange={(e) => setSiteId(e.target.value)}
+              className={`select select-bordered select-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm ${
+                !isSiteAvailable ? "border-rose-400 focus:border-rose-500" : ""
+              }`}
+              required
+            >
+              {sites.map((s) => {
+                const avail = availabilityMap[s._id];
+                const isAvail = avail ? avail.isAvailable : s.status === "available";
+                const isCurrent = s._id === reservation.siteId?._id || s._id === reservation.siteId;
+                const labelSuffix = isCurrent
+                  ? "(Current Site)"
+                  : avail
+                  ? isAvail
+                    ? "✓ Available"
+                    : `✗ ${avail.conflictReason || "Unavailable"}`
+                  : "";
+
+                return (
+                  <option
+                    key={s._id}
+                    value={s._id}
+                    disabled={!isCurrent && avail && !isAvail}
+                  >
+                    Site {s.siteNumber} — {s.siteTypeSnapshot?.name || "Standard"} ({formatCurrency(s.currentBaseRate)}/nt) {labelSuffix}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
           {/* Availability Conflict Alert */}
           {!isSiteAvailable && (
             <div className="p-2.5 rounded-md bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-800 font-semibold">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
               <span>
-                Site {selectedSite?.siteNumber} is {conflictReason || "unavailable for the selected dates"}.
+                Site {selectedSite?.siteNumber} is {conflictReason || "unavailable for these dates"}.
               </span>
             </div>
           )}
 
-          {/* Compatibility Warning if RV length exceeds site limit */}
+          {/* Compatibility Warning */}
           {isLengthIncompatible && (
             <div className="p-2.5 rounded-md bg-amber-50 border border-amber-200 flex items-center gap-2 text-xs text-amber-800 font-medium">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
@@ -396,7 +477,93 @@ export function EditReservationModal({
           </div>
         </div>
 
-        {/* Section 3: Notes & Pricing Summary */}
+        {/* Section 3: Add-On Services & Extras */}
+        {availableAddOns.length > 0 && (
+          <div className="p-3 sm:p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-200/60">
+              <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                3. Add-On Services & Amenities
+              </div>
+              {pricing.addOnsSubtotal > 0 && (
+                <span className="badge badge-success badge-xs font-mono font-bold text-[10px] text-white">
+                  +{formatCurrency(pricing.addOnsSubtotal)} Added
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {availableAddOns.map((addon) => {
+                const qty = selectedAddOns[addon._id] || selectedAddOns[addon.name] || 0;
+                const isSelected = qty > 0;
+
+                return (
+                  <div
+                    key={addon._id}
+                    className={`p-2.5 rounded-lg border transition-all flex items-center justify-between gap-2 ${
+                      isSelected
+                        ? "bg-emerald-50/50 border-emerald-400 shadow-2xs"
+                        : "bg-white border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="min-w-0 pr-1">
+                      <div className="font-bold text-xs text-slate-900 truncate">
+                        {addon.name}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-mono">
+                        {formatCurrency(addon.price)}{" "}
+                        <span className="text-[10px]">
+                          {addon.pricingType === "per_night"
+                            ? "/ nt"
+                            : addon.pricingType === "per_person"
+                            ? "/ person"
+                            : addon.pricingType === "per_unit"
+                            ? "/ unit"
+                            : "flat"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Quantity Stepper */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isSelected ? (
+                        <div className="flex items-center gap-1 bg-white rounded-md border border-emerald-300 p-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateAddOnQty(addon, -1)}
+                            className="btn btn-ghost btn-xs btn-circle h-6 w-6 text-slate-600 hover:text-slate-900"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="w-5 text-center font-mono font-bold text-xs text-emerald-800">
+                            {qty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateAddOnQty(addon, 1)}
+                            className="btn btn-ghost btn-xs btn-circle h-6 w-6 text-slate-600 hover:text-slate-900"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAddOn(addon)}
+                          className="btn btn-outline btn-xs font-bold text-[11px] text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md"
+                        >
+                          + Add
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Section 4: Notes & Pricing Summary */}
         <div className="p-3 sm:p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -427,6 +594,14 @@ export function EditReservationModal({
               </span>
               <span className="font-mono">{formatCurrency(pricing.baseSubtotal)}</span>
             </div>
+            {pricing.addOnsSubtotal > 0 && (
+              <div className="flex justify-between text-slate-600">
+                <span>Add-On Services & Extras:</span>
+                <span className="font-mono font-bold text-emerald-800">
+                  +{formatCurrency(pricing.addOnsSubtotal)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-slate-600">
               <span>Taxes & Fees (7.5%):</span>
               <span className="font-mono">{formatCurrency(pricing.taxAmount)}</span>

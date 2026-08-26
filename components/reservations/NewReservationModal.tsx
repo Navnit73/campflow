@@ -8,7 +8,19 @@ import { RV_TYPES } from "@/lib/constants";
 import { calculatePricing } from "@/lib/utils/pricing";
 import { formatCurrency, formatRvType } from "@/lib/utils/format";
 import { parseDateOnly, formatDateKey, addDaysStr } from "@/lib/utils/date";
-import { Loader2, Calendar, User, CreditCard, MapPin, Truck, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  Calendar,
+  User,
+  CreditCard,
+  MapPin,
+  Truck,
+  AlertCircle,
+  Sparkles,
+  Plus,
+  Minus,
+  Check,
+} from "lucide-react";
 
 interface NewReservationModalProps {
   isOpen: boolean;
@@ -31,6 +43,7 @@ export function NewReservationModal({
   const [loading, setLoading] = useState(false);
   const [sites, setSites] = useState<any[]>([]);
   const [existingGuests, setExistingGuests] = useState<any[]>([]);
+  const [availableAddOns, setAvailableAddOns] = useState<any[]>([]);
   const [availabilityMap, setAvailabilityMap] = useState<Record<string, { isAvailable: boolean; conflictReason: string | null }>>({});
 
   // Guest Mode: 'new' or 'existing'
@@ -51,6 +64,9 @@ export function NewReservationModal({
   const [specialRequests, setSpecialRequests] = useState("");
   const [notes, setNotes] = useState("");
 
+  // Selected Add-Ons State: { [addOnId]: quantity }
+  const [selectedAddOns, setSelectedAddOns] = useState<Record<string, number>>({});
+
   // Guest Details
   const [guestFirstName, setGuestFirstName] = useState("");
   const [guestLastName, setGuestLastName] = useState("");
@@ -64,7 +80,7 @@ export function NewReservationModal({
   const [collectPaymentNow, setCollectPaymentNow] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("credit_card");
 
-  // Load sites & guests
+  // Load sites, guests & active add-ons
   useEffect(() => {
     if (isOpen) {
       apiClient.get("/api/sites").then((res) => {
@@ -79,6 +95,12 @@ export function NewReservationModal({
       apiClient.get("/api/guests?limit=100").then((res) => {
         if (res.data?.success) {
           setExistingGuests(res.data.data.guests || []);
+        }
+      });
+
+      apiClient.get("/api/addons?isActive=true").then((res) => {
+        if (res.data?.success) {
+          setAvailableAddOns(res.data.data || []);
         }
       });
     }
@@ -151,6 +173,43 @@ export function NewReservationModal({
     }
   };
 
+  const handleToggleAddOn = (addOnId: string) => {
+    setSelectedAddOns((prev) => {
+      const current = prev[addOnId] || 0;
+      if (current > 0) {
+        const next = { ...prev };
+        delete next[addOnId];
+        return next;
+      }
+      return { ...prev, [addOnId]: 1 };
+    });
+  };
+
+  const handleUpdateAddOnQty = (addOnId: string, delta: number) => {
+    setSelectedAddOns((prev) => {
+      const current = prev[addOnId] || 0;
+      const nextVal = Math.max(0, current + delta);
+      if (nextVal === 0) {
+        const next = { ...prev };
+        delete next[addOnId];
+        return next;
+      }
+      return { ...prev, [addOnId]: nextVal };
+    });
+  };
+
+  // Build applied addOns for pricing
+  const appliedAddOns = availableAddOns
+    .filter((a) => (selectedAddOns[a._id] || 0) > 0)
+    .map((a) => ({
+      addOnId: a._id,
+      name: a.name,
+      price: a.price,
+      pricingType: a.pricingType,
+      quantity: selectedAddOns[a._id],
+      taxable: a.taxable,
+    }));
+
   // Selected site pricing estimate & compatibility
   const selectedSite = sites.find((s) => s._id === siteId);
   const maxRig = selectedSite?.siteTypeSnapshot?.maxRigLength ?? 45;
@@ -162,7 +221,9 @@ export function NewReservationModal({
     nightlyRate: selectedSite?.currentBaseRate || 50,
     checkInDate,
     checkOutDate: checkOutDate > checkInDate ? checkOutDate : checkInDate,
+    adults: Number(adults) || 2,
     taxRatePercent: 7.5,
+    addOns: appliedAddOns,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -185,6 +246,7 @@ export function NewReservationModal({
         adults: Number(adults),
         children: Number(children),
         pets: Number(pets),
+        addOns: appliedAddOns,
         discountCode: discountCode || undefined,
         specialRequests,
         notes,
@@ -231,8 +293,8 @@ export function NewReservationModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Create New Reservation"
-      subtitle="Book a campground site and record camper details"
-      maxWidth="max-w-2xl"
+      subtitle="Book a campground site, attach services, and record camper details"
+      maxWidth="max-w-3xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Section 1: Site & Dates */}
@@ -497,16 +559,105 @@ export function NewReservationModal({
           </div>
         </div>
 
-        {/* Section 3: Billing & Optional Offline Payment */}
+        {/* Section 3: Add-On Services & Extras */}
+        {availableAddOns.length > 0 && (
+          <div className="p-3 sm:p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-200/60">
+              <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                3. Add-On Services & Amenities
+              </div>
+              {appliedAddOns.length > 0 && (
+                <span className="badge badge-success badge-xs font-mono font-bold text-[10px] text-white">
+                  +{formatCurrency(pricing.addOnsSubtotal)} Added
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {availableAddOns.map((addon) => {
+                const qty = selectedAddOns[addon._id] || 0;
+                const isSelected = qty > 0;
+
+                return (
+                  <div
+                    key={addon._id}
+                    className={`p-2.5 rounded-lg border transition-all flex items-center justify-between gap-2 ${
+                      isSelected
+                        ? "bg-emerald-50/50 border-emerald-400 shadow-2xs"
+                        : "bg-white border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="min-w-0 pr-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs text-slate-900 truncate">
+                          {addon.name}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-mono">
+                        {formatCurrency(addon.price)}{" "}
+                        <span className="text-[10px]">
+                          {addon.pricingType === "per_night"
+                            ? "/ nt"
+                            : addon.pricingType === "per_person"
+                            ? "/ person"
+                            : addon.pricingType === "per_unit"
+                            ? "/ unit"
+                            : "flat"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Quantity Stepper */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isSelected ? (
+                        <div className="flex items-center gap-1 bg-white rounded-md border border-emerald-300 p-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateAddOnQty(addon._id, -1)}
+                            className="btn btn-ghost btn-xs btn-circle h-6 w-6 text-slate-600 hover:text-slate-900"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="w-5 text-center font-mono font-bold text-xs text-emerald-800">
+                            {qty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateAddOnQty(addon._id, 1)}
+                            className="btn btn-ghost btn-xs btn-circle h-6 w-6 text-slate-600 hover:text-slate-900"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAddOn(addon._id)}
+                          className="btn btn-outline btn-xs font-bold text-[11px] text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md"
+                        >
+                          + Add
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Section 4: Billing & Optional Offline Payment */}
         <div className="p-3 sm:p-4 rounded-lg border border-slate-200 bg-white space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
               <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              3. Rate & Offline Payment
+              4. Rate & Offline Payment
             </div>
             <div className="text-right">
               <span className="text-xs text-slate-500 font-mono">
-                {pricing.numNights} Nights @ {formatCurrency(pricing.nightlyRate)} • Total:{" "}
+                {pricing.numNights} Nights @ {formatCurrency(pricing.nightlyRate)}
+                {pricing.addOnsSubtotal > 0 && ` + ${formatCurrency(pricing.addOnsSubtotal)} Services`} • Total:{" "}
               </span>
               <span className="text-base font-black text-emerald-700 font-mono">
                 {formatCurrency(pricing.totalAmount)}

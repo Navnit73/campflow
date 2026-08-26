@@ -209,6 +209,7 @@ export class PublicBookingService {
       nightlyRate: site.currentBaseRate,
       checkInDate: dIn,
       checkOutDate: dOut,
+      adults: input.adults || 2,
       taxRatePercent: property.taxRatePercent || 0,
       discountType: discountDoc?.type,
       discountValue: discountDoc?.value,
