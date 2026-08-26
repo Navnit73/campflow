@@ -21,16 +21,21 @@ export class DashboardService {
     const [
       totalSites,
       maintenanceSites,
-      currentlyOnsiteCount,
+      currentlyOnsiteReservations,
       todayArrivals,
       todayDepartures,
       upcomingReservations,
       recentPayments,
+      todayPayments,
+      activeReservationsBalances,
+      recentReservations,
       totalGuests,
     ] = await Promise.all([
-      Site.countDocuments({ propertyId: propId, status: "available" }),
+      Site.countDocuments({ propertyId: propId, status: { $ne: "inactive" } }),
       Site.countDocuments({ propertyId: propId, status: "maintenance" }),
-      Reservation.countDocuments({ propertyId: propId, status: "checked_in" }),
+      Reservation.find({ propertyId: propId, status: "checked_in" })
+        .sort({ checkOutDate: 1 })
+        .lean(),
       Reservation.find({
         propertyId: propId,
         status: { $in: ["confirmed", "pending"] },
@@ -55,16 +60,41 @@ export class DashboardService {
         .lean(),
       Payment.find({ propertyId: propId })
         .sort({ createdAt: -1 })
-        .limit(5)
+        .limit(6)
         .populate("reservationId", "confirmationCode")
         .populate("guestId", "firstName lastName")
+        .lean(),
+      Payment.find({
+        propertyId: propId,
+        status: "completed",
+        createdAt: { $gte: todayStart, $lte: todayEnd },
+      }).lean(),
+      Reservation.find({
+        propertyId: propId,
+        status: { $in: ["confirmed", "checked_in", "pending"] },
+      })
+        .select("pricing.balanceDue")
+        .lean(),
+      Reservation.find({ propertyId: propId })
+        .sort({ createdAt: -1 })
+        .limit(6)
         .lean(),
       Guest.countDocuments({ propertyId: propId }),
     ]);
 
     const activeSites = Math.max(1, totalSites);
+    const currentlyOnsiteCount = currentlyOnsiteReservations.length;
     const occupancyRate = Number(((currentlyOnsiteCount / activeSites) * 100).toFixed(1));
-    const availableToday = Math.max(0, totalSites - currentlyOnsiteCount);
+    const availableToday = Math.max(0, totalSites - maintenanceSites - currentlyOnsiteCount);
+
+    const todayRevenue = todayPayments.reduce((sum, p) => {
+      const amt = Number(p.amount) || 0;
+      return p.type === "refund" ? sum - amt : sum + amt;
+    }, 0);
+
+    const outstandingBalance = activeReservationsBalances.reduce((sum, r) => {
+      return sum + (Number(r.pricing?.balanceDue) || 0);
+    }, 0);
 
     return {
       stats: {
@@ -75,11 +105,15 @@ export class DashboardService {
         occupancyRate,
         todayArrivalsCount: todayArrivals.length,
         todayDeparturesCount: todayDepartures.length,
+        todayRevenue: Number(todayRevenue.toFixed(2)),
+        outstandingBalance: Number(outstandingBalance.toFixed(2)),
         totalGuests,
       },
       todayArrivals,
       todayDepartures,
+      currentlyOnsiteReservations,
       upcomingReservations,
+      recentReservations,
       recentPayments,
     };
   }

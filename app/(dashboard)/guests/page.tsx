@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import apiClient from "@/lib/axios/client";
 import { GuestFormModal } from "@/components/guests/GuestFormModal";
+import { NewReservationModal } from "@/components/reservations/NewReservationModal";
 import { Modal } from "@/components/ui/Modal";
 import { ReservationBadge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
@@ -18,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Inbox,
+  CalendarPlus,
 } from "lucide-react";
 
 export default function GuestsPage() {
@@ -32,6 +34,7 @@ export default function GuestsPage() {
   const [guestToEdit, setGuestToEdit] = useState<any | null>(null);
   const [inspectGuestId, setInspectGuestId] = useState<string | null>(null);
   const [guestDetails, setGuestDetails] = useState<any | null>(null);
+  const [bookingGuest, setBookingGuest] = useState<any | null>(null);
 
   const fetchGuests = async (page = 1) => {
     setLoading(true);
@@ -234,17 +237,26 @@ export default function GuestsPage() {
                       )}
                     </td>
                     <td className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => {
-                          setGuestToEdit(g);
-                          setIsGuestModalOpen(true);
-                        }}
-                        className="btn btn-ghost btn-xs text-emerald-700 hover:bg-emerald-50 rounded"
-                        title="Edit Profile"
-                        aria-label={`Edit ${g.firstName} ${g.lastName}`}
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => setBookingGuest(g)}
+                          className="btn btn-ghost btn-xs text-emerald-700 hover:bg-emerald-50 rounded"
+                          title="Book New Reservation for Guest"
+                        >
+                          <CalendarPlus className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setGuestToEdit(g);
+                            setIsGuestModalOpen(true);
+                          }}
+                          className="btn btn-ghost btn-xs text-slate-600 hover:bg-slate-100 rounded"
+                          title="Edit Profile"
+                          aria-label={`Edit ${g.firstName} ${g.lastName}`}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -379,6 +391,17 @@ export default function GuestsPage() {
         }}
         onSuccess={() => fetchGuests(pagination.page)}
         guestToEdit={guestToEdit}
+      />
+
+      {/* Book for Guest Modal */}
+      <NewReservationModal
+        isOpen={!!bookingGuest}
+        initialGuest={bookingGuest}
+        onClose={() => setBookingGuest(null)}
+        onSuccess={() => {
+          setBookingGuest(null);
+          fetchGuests(pagination.page);
+        }}
       />
     </div>
   );

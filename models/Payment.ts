@@ -12,6 +12,7 @@ export interface IPayment extends Document {
   propertyId: mongoose.Types.ObjectId;
   reservationId: mongoose.Types.ObjectId;
   guestId?: mongoose.Types.ObjectId;
+  type: "payment" | "refund";
   amount: number;
   currency: string;
   method: PaymentMethod;
@@ -46,6 +47,12 @@ const PaymentSchema = new Schema<IPayment>(
     guestId: {
       type: Schema.Types.ObjectId,
       ref: "Guest",
+    },
+    type: {
+      type: String,
+      enum: ["payment", "refund"],
+      default: "payment",
+      required: true,
     },
     amount: {
       type: Number,

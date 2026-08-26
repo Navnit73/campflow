@@ -19,7 +19,9 @@ import {
   Printer,
   DollarSign,
   RefreshCw,
+  Edit2,
 } from "lucide-react";
+import { EditReservationModal } from "@/components/reservations/EditReservationModal";
 
 interface ReservationDetailModalProps {
   reservationId: string | null;
@@ -40,6 +42,7 @@ export function ReservationDetailModal({
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const fetchDetails = async () => {
     if (!reservationId) return;
@@ -188,6 +191,15 @@ export function ReservationDetailModal({
                   Collect Payment ({formatCurrency(data.pricing.balanceDue)})
                 </button>
               )}
+
+              <button
+                onClick={() => setIsEditOpen(true)}
+                className="btn btn-outline btn-xs sm:btn-sm gap-1 font-bold text-slate-700 rounded-md hover:bg-slate-100"
+                title="Edit Dates, Site or Guest"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-emerald-600" />
+                Edit
+              </button>
 
               {data.status !== "cancelled" && data.status !== "checked_out" && (
                 <button
@@ -389,6 +401,17 @@ export function ReservationDetailModal({
               )}
             </div>
           )}
+          {/* Edit Reservation Modal */}
+          <EditReservationModal
+            isOpen={isEditOpen}
+            reservation={data}
+            onClose={() => setIsEditOpen(false)}
+            onSuccess={() => {
+              setIsEditOpen(false);
+              fetchDetails();
+              onUpdated();
+            }}
+          />
         </div>
       )}
     </Modal>

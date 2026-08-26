@@ -53,6 +53,16 @@ export const updateReservationSchema = z.object({
   status: z.enum(RESERVATION_STATUSES).optional(),
   specialRequests: z.string().optional(),
   notes: z.string().optional(),
+  discountCode: z.string().optional(),
+  guestSnapshot: z
+    .object({
+      fullName: z.string().optional(),
+      email: z.string().optional(),
+      phone: z.string().optional(),
+      rvType: z.string().optional(),
+      rvLengthFt: z.coerce.number().optional(),
+    })
+    .optional(),
 });
 
 export const queryReservationsSchema = z.object({

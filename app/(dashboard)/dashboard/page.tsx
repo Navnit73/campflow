@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import apiClient from "@/lib/axios/client";
-import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/Toast";
 import { StatCard } from "@/components/ui/StatCard";
 import { ReservationBadge } from "@/components/ui/Badge";
 import { ReservationDetailModal } from "@/components/reservations/ReservationDetailModal";
+import { NewReservationModal } from "@/components/reservations/NewReservationModal";
 import { PaymentModal } from "@/components/payments/PaymentModal";
 import { formatCurrency, formatDate, formatRvType, formatDateTime } from "@/lib/utils/format";
 import {
@@ -20,15 +20,23 @@ import {
   ArrowRight,
   RefreshCw,
   Inbox,
+  PlusCircle,
+  Users,
+  AlertCircle,
+  CreditCard,
+  Layers,
 } from "lucide-react";
 
 export default function DashboardPage() {
-  const { property } = useAuth();
   const { success, error } = useToast();
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Modals & State
   const [selectedResId, setSelectedResId] = useState<string | null>(null);
   const [paymentRes, setPaymentRes] = useState<any | null>(null);
+  const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"arrivals" | "departures" | "inhouse">("arrivals");
 
   const loadDashboard = async () => {
     setLoading(true);
@@ -84,6 +92,8 @@ export default function DashboardPage() {
     occupancyRate: 0,
     todayArrivalsCount: 0,
     todayDeparturesCount: 0,
+    todayRevenue: 0,
+    outstandingBalance: 0,
   };
 
   return (
@@ -92,20 +102,35 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
-            Front Desk Overview
+            Front Desk Operations
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Real-time campground occupancy, arrivals, and operations desk
+            Real-time campground occupancy, fast check-ins, site statuses, and daily billing
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Quick Actions Bar */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsNewReservationOpen(true)}
+            className="btn btn-primary btn-sm gap-1.5 font-bold rounded-md shadow-xs"
+          >
+            <PlusCircle className="w-4 h-4" />
+            New Reservation
+          </button>
           <Link
             href="/tape-chart"
-            className="btn btn-outline btn-sm gap-1.5 font-bold text-xs rounded-md"
+            className="btn btn-outline btn-sm gap-1.5 font-bold text-xs rounded-md bg-white"
           >
             <CalendarDays className="w-4 h-4 text-emerald-600" />
-            Visual Tape Chart
+            Tape Chart
+          </Link>
+          <Link
+            href="/sites"
+            className="btn btn-outline btn-sm gap-1.5 font-bold text-xs rounded-md bg-white"
+          >
+            <MapPin className="w-4 h-4 text-sky-600" />
+            Visual Map
           </Link>
           <button
             onClick={loadDashboard}
@@ -118,196 +143,314 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Primary KPI Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
+      {/* 8 Primary KPI Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3.5">
         <StatCard
           title="Occupancy Rate"
           value={`${stats.occupancyRate}%`}
-          subtitle={`${stats.currentlyOnsite} of ${stats.totalSites} active sites filled`}
+          subtitle={`${stats.currentlyOnsite} of ${stats.totalSites} active sites`}
           icon={<TrendingUp className="w-4 h-4 text-emerald-600" />}
           colorClass="bg-emerald-50 text-emerald-700"
         />
         <StatCard
           title="Available Sites"
           value={stats.availableToday}
-          subtitle="Ready for walk-ins & bookings"
-          icon={<MapPin className="w-4 h-4 text-sky-600" />}
-          colorClass="bg-sky-50 text-sky-700"
+          subtitle="Vacant & ready for campers"
+          icon={<MapPin className="w-4 h-4 text-teal-600" />}
+          colorClass="bg-teal-50 text-teal-700"
         />
         <StatCard
           title="Arriving Today"
           value={stats.todayArrivalsCount}
-          subtitle="Scheduled check-ins at desk"
+          subtitle="Scheduled desk check-ins"
           icon={<CheckCircle2 className="w-4 h-4 text-amber-600" />}
           colorClass="bg-amber-50 text-amber-700"
         />
         <StatCard
           title="Departing Today"
           value={stats.todayDeparturesCount}
-          subtitle="Scheduled checkouts today"
+          subtitle="Scheduled departures"
           icon={<LogOut className="w-4 h-4 text-indigo-600" />}
           colorClass="bg-indigo-50 text-indigo-700"
         />
+        <StatCard
+          title="Today's Revenue"
+          value={formatCurrency(stats.todayRevenue || 0)}
+          subtitle="Collected offline today"
+          icon={<DollarSign className="w-4 h-4 text-emerald-600" />}
+          colorClass="bg-emerald-50 text-emerald-700"
+        />
+        <StatCard
+          title="Outstanding Balances"
+          value={formatCurrency(stats.outstandingBalance || 0)}
+          subtitle="Uncollected across bookings"
+          icon={<AlertCircle className="w-4 h-4 text-rose-600" />}
+          colorClass="bg-rose-50 text-rose-700"
+        />
+        <StatCard
+          title="Current In-House"
+          value={stats.currentlyOnsite}
+          subtitle="Checked-in onsite guests"
+          icon={<Users className="w-4 h-4 text-sky-600" />}
+          colorClass="bg-sky-50 text-sky-700"
+        />
+        <StatCard
+          title="Occupied Sites"
+          value={stats.currentlyOnsite}
+          subtitle={`Out of ${stats.totalSites} total sites`}
+          icon={<Layers className="w-4 h-4 text-violet-600" />}
+          colorClass="bg-violet-50 text-violet-700"
+        />
       </div>
 
-      {/* Main Operations Desk: Arrivals & Departures */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Today's Arrivals */}
-        <div className="surface-card p-4 sm:p-5 rounded-lg flex flex-col justify-between space-y-3 border border-slate-200">
-          <div>
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <h3 className="font-bold text-sm text-slate-900">
-                  Today&apos;s Arrivals ({data?.todayArrivals?.length || 0})
-                </h3>
-              </div>
-              <Link
-                href="/reservations"
-                className="text-xs text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
-              >
-                All Bookings <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-
-            <div className="divide-y divide-slate-100 mt-1">
-              {loading ? (
-                <div className="py-8 text-center text-xs text-slate-500 space-y-2">
-                  <RefreshCw className="w-4 h-4 animate-spin mx-auto text-emerald-600" />
-                  <p>Loading arrivals...</p>
-                </div>
-              ) : !data?.todayArrivals || data.todayArrivals.length === 0 ? (
-                <div className="py-8 text-center space-y-1.5">
-                  <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                    <Inbox className="w-4 h-4" />
-                  </div>
-                  <p className="text-xs text-slate-500">No upcoming arrivals scheduled for today.</p>
-                </div>
-              ) : (
-                data.todayArrivals.map((res: any) => (
-                  <div
-                    key={res._id}
-                    className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 rounded-md px-1.5 transition-colors"
-                  >
-                    <div
-                      className="cursor-pointer min-w-0 flex-1"
-                      onClick={() => setSelectedResId(res._id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-slate-900 truncate">
-                          {res.guestSnapshot?.fullName}
-                        </span>
-                        <span className="badge badge-xs font-mono font-bold bg-slate-100 text-slate-800 border-slate-200 shrink-0 rounded">
-                          Site {res.siteSnapshot?.siteNumber}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 mt-0.5">
-                        <span>{res.numNights} nights</span>
-                        <span>•</span>
-                        <span>{formatRvType(res.guestSnapshot?.rvType || "travel_trailer")}</span>
-                        {res.pricing?.balanceDue > 0 && (
-                          <span className="text-rose-700 font-bold">
-                            (Due: {formatCurrency(res.pricing.balanceDue)})
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => handleQuickCheckIn(res._id)}
-                        className="btn btn-success btn-xs text-white font-bold gap-1 rounded"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Check In
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+      {/* Main Operations Desk: Tabbed Arrivals, Departures & In-House */}
+      <div className="surface-card rounded-lg border border-slate-200 overflow-hidden">
+        {/* Tab Controls */}
+        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+          <div className="join bg-white border border-slate-200 rounded-md p-0.5">
+            <button
+              onClick={() => setActiveTab("arrivals")}
+              className={`btn btn-xs join-item font-bold gap-1.5 ${
+                activeTab === "arrivals" ? "bg-emerald-600 text-white" : "btn-ghost text-slate-700"
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              Today&apos;s Arrivals ({data?.todayArrivals?.length || 0})
+            </button>
+            <button
+              onClick={() => setActiveTab("departures")}
+              className={`btn btn-xs join-item font-bold gap-1.5 ${
+                activeTab === "departures" ? "bg-indigo-600 text-white" : "btn-ghost text-slate-700"
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+              Today&apos;s Departures ({data?.todayDepartures?.length || 0})
+            </button>
+            <button
+              onClick={() => setActiveTab("inhouse")}
+              className={`btn btn-xs join-item font-bold gap-1.5 ${
+                activeTab === "inhouse" ? "bg-sky-600 text-white" : "btn-ghost text-slate-700"
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-sky-400"></span>
+              Currently Onsite ({data?.currentlyOnsiteReservations?.length || 0})
+            </button>
           </div>
+
+          <Link
+            href="/reservations"
+            className="text-xs text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
+          >
+            All Reservations <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
-        {/* Today's Departures */}
-        <div className="surface-card p-4 sm:p-5 rounded-lg flex flex-col justify-between space-y-3 border border-slate-200">
-          <div>
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                <h3 className="font-bold text-sm text-slate-900">
-                  Today&apos;s Departures ({data?.todayDepartures?.length || 0})
-                </h3>
+        {/* Tab Content 1: Arrivals */}
+        {activeTab === "arrivals" && (
+          <div className="p-4 divide-y divide-slate-100">
+            {loading ? (
+              <div className="py-8 text-center text-xs text-slate-500 space-y-2">
+                <RefreshCw className="w-4 h-4 animate-spin mx-auto text-emerald-600" />
+                <p>Loading arrivals...</p>
               </div>
-              <Link
-                href="/reservations?status=checked_in"
-                className="text-xs text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
-              >
-                Onsite Guests <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-
-            <div className="divide-y divide-slate-100 mt-1">
-              {loading ? (
-                <div className="py-8 text-center text-xs text-slate-500 space-y-2">
-                  <RefreshCw className="w-4 h-4 animate-spin mx-auto text-emerald-600" />
-                  <p>Loading departures...</p>
+            ) : !data?.todayArrivals || data.todayArrivals.length === 0 ? (
+              <div className="py-8 text-center space-y-1.5">
+                <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <Inbox className="w-4 h-4" />
                 </div>
-              ) : !data?.todayDepartures || data.todayDepartures.length === 0 ? (
-                <div className="py-8 text-center space-y-1.5">
-                  <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                    <LogOut className="w-4 h-4" />
-                  </div>
-                  <p className="text-xs text-slate-500">No departures scheduled for today.</p>
-                </div>
-              ) : (
-                data.todayDepartures.map((res: any) => (
+                <p className="text-xs text-slate-500">No scheduled arrivals remaining for today.</p>
+              </div>
+            ) : (
+              data.todayArrivals.map((res: any) => (
+                <div
+                  key={res._id}
+                  className="py-3 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50 rounded-md px-2 transition-colors"
+                >
                   <div
-                    key={res._id}
-                    className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 rounded-md px-1.5 transition-colors"
+                    className="cursor-pointer min-w-0 flex-1"
+                    onClick={() => setSelectedResId(res._id)}
                   >
-                    <div
-                      className="cursor-pointer min-w-0 flex-1"
-                      onClick={() => setSelectedResId(res._id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-slate-900 truncate">
-                          {res.guestSnapshot?.fullName}
-                        </span>
-                        <span className="badge badge-xs font-mono font-bold bg-slate-100 text-slate-800 border-slate-200 shrink-0 rounded">
-                          Site {res.siteSnapshot?.siteNumber}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                        <span>Balance: {formatCurrency(res.pricing?.balanceDue)}</span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900 truncate">
+                        {res.guestSnapshot?.fullName}
+                      </span>
+                      <span className="badge badge-xs font-mono font-bold bg-emerald-100 text-emerald-800 border-emerald-200 shrink-0 rounded">
+                        Site {res.siteSnapshot?.siteNumber}
+                      </span>
+                      <ReservationBadge status={res.status} />
                     </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 mt-1">
+                      <span>Stay: {res.numNights} nights ({formatDate(res.checkInDate)} – {formatDate(res.checkOutDate)})</span>
+                      <span>•</span>
+                      <span>{formatRvType(res.guestSnapshot?.rvType || "travel_trailer")} ({res.guestSnapshot?.rvLengthFt || 30}ft)</span>
                       {res.pricing?.balanceDue > 0 ? (
-                        <button
-                          onClick={() => setPaymentRes(res)}
-                          className="btn btn-warning btn-xs font-bold gap-1 text-slate-900 rounded"
-                        >
-                          <DollarSign className="w-3.5 h-3.5" />
-                          Pay ({formatCurrency(res.pricing.balanceDue)})
-                        </button>
+                        <span className="text-rose-700 font-bold font-mono">
+                          • Balance Due: {formatCurrency(res.pricing.balanceDue)}
+                        </span>
                       ) : (
-                        <button
-                          onClick={() => handleQuickCheckOut(res)}
-                          className="btn btn-info btn-xs text-white font-bold gap-1 rounded"
-                        >
-                          <LogOut className="w-3.5 h-3.5" />
-                          Check Out
-                        </button>
+                        <span className="text-emerald-700 font-bold">• Paid in Full</span>
                       )}
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {res.pricing?.balanceDue > 0 && (
+                      <button
+                        onClick={() => setPaymentRes(res)}
+                        className="btn btn-primary btn-xs font-bold gap-1 rounded"
+                      >
+                        <CreditCard className="w-3.5 h-3.5" />
+                        Collect
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleQuickCheckIn(res._id)}
+                      className="btn btn-success btn-xs text-white font-bold gap-1 rounded"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Check In
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-        </div>
+        )}
+
+        {/* Tab Content 2: Departures */}
+        {activeTab === "departures" && (
+          <div className="p-4 divide-y divide-slate-100">
+            {loading ? (
+              <div className="py-8 text-center text-xs text-slate-500 space-y-2">
+                <RefreshCw className="w-4 h-4 animate-spin mx-auto text-emerald-600" />
+                <p>Loading departures...</p>
+              </div>
+            ) : !data?.todayDepartures || data.todayDepartures.length === 0 ? (
+              <div className="py-8 text-center space-y-1.5">
+                <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <LogOut className="w-4 h-4" />
+                </div>
+                <p className="text-xs text-slate-500">No departures scheduled for today.</p>
+              </div>
+            ) : (
+              data.todayDepartures.map((res: any) => (
+                <div
+                  key={res._id}
+                  className="py-3 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50 rounded-md px-2 transition-colors"
+                >
+                  <div
+                    className="cursor-pointer min-w-0 flex-1"
+                    onClick={() => setSelectedResId(res._id)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900 truncate">
+                        {res.guestSnapshot?.fullName}
+                      </span>
+                      <span className="badge badge-xs font-mono font-bold bg-indigo-100 text-indigo-800 border-indigo-200 shrink-0 rounded">
+                        Site {res.siteSnapshot?.siteNumber}
+                      </span>
+                      <ReservationBadge status={res.status} />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                      <span>Total: {formatCurrency(res.pricing?.totalAmount)}</span>
+                      {res.pricing?.balanceDue > 0 ? (
+                        <span className="text-rose-700 font-bold font-mono">
+                          • Balance Due: {formatCurrency(res.pricing.balanceDue)}
+                        </span>
+                      ) : (
+                        <span className="text-emerald-700 font-bold">• Zero Balance</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {res.pricing?.balanceDue > 0 ? (
+                      <button
+                        onClick={() => setPaymentRes(res)}
+                        className="btn btn-warning btn-xs font-bold gap-1 text-slate-900 rounded"
+                      >
+                        <DollarSign className="w-3.5 h-3.5" />
+                        Settle ({formatCurrency(res.pricing.balanceDue)})
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleQuickCheckOut(res)}
+                        className="btn btn-info btn-xs text-white font-bold gap-1 rounded"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        Check Out
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Tab Content 3: Currently In-House */}
+        {activeTab === "inhouse" && (
+          <div className="p-4 divide-y divide-slate-100">
+            {loading ? (
+              <div className="py-8 text-center text-xs text-slate-500 space-y-2">
+                <RefreshCw className="w-4 h-4 animate-spin mx-auto text-emerald-600" />
+                <p>Loading onsite campers...</p>
+              </div>
+            ) : !data?.currentlyOnsiteReservations || data.currentlyOnsiteReservations.length === 0 ? (
+              <div className="py-8 text-center space-y-1.5">
+                <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <Users className="w-4 h-4" />
+                </div>
+                <p className="text-xs text-slate-500">No guests currently checked-in onsite.</p>
+              </div>
+            ) : (
+              data.currentlyOnsiteReservations.map((res: any) => (
+                <div
+                  key={res._id}
+                  className="py-3 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50 rounded-md px-2 transition-colors"
+                >
+                  <div
+                    className="cursor-pointer min-w-0 flex-1"
+                    onClick={() => setSelectedResId(res._id)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900 truncate">
+                        {res.guestSnapshot?.fullName}
+                      </span>
+                      <span className="badge badge-xs font-mono font-bold bg-sky-100 text-sky-800 border-sky-200 shrink-0 rounded">
+                        Site {res.siteSnapshot?.siteNumber}
+                      </span>
+                      <ReservationBadge status={res.status} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 mt-1">
+                      <span>Departing: {formatDate(res.checkOutDate)}</span>
+                      <span>•</span>
+                      <span>Phone: {res.guestSnapshot?.phone}</span>
+                      <span>•</span>
+                      <span>{formatRvType(res.guestSnapshot?.rvType || "travel_trailer")}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => setSelectedResId(res._id)}
+                      className="btn btn-outline btn-xs font-bold rounded"
+                    >
+                      View Folio
+                    </button>
+                    <button
+                      onClick={() => handleQuickCheckOut(res)}
+                      className="btn btn-info btn-xs text-white font-bold gap-1 rounded"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Check Out
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom Section: Upcoming 7-Day Bookings & Recent Activity */}
@@ -359,7 +502,7 @@ export default function DashboardPage() {
                       <td className="font-bold text-slate-900">{res.guestSnapshot?.fullName}</td>
                       <td>
                         <span className="badge badge-xs font-mono font-bold bg-slate-100 text-slate-700 border-slate-200 rounded">
-                          {res.siteSnapshot?.siteNumber}
+                          Site {res.siteSnapshot?.siteNumber}
                         </span>
                       </td>
                       <td className="text-xs font-medium">{formatDate(res.checkInDate)}</td>
@@ -380,7 +523,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
             <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-emerald-600" />
-              Recent Payments
+              Recent Offline Payments
             </h3>
             <Link
               href="/payments"
@@ -406,8 +549,10 @@ export default function DashboardPage() {
                       {p.method?.replace("_", " ")} • {formatDateTime(p.createdAt)}
                     </div>
                   </div>
-                  <div className="font-black text-emerald-700 text-xs font-mono shrink-0">
-                    +{formatCurrency(p.amount)}
+                  <div className={`font-black text-xs font-mono shrink-0 ${
+                    p.type === "refund" ? "text-rose-700" : "text-emerald-700"
+                  }`}>
+                    {p.type === "refund" ? `-${formatCurrency(p.amount)}` : `+${formatCurrency(p.amount)}`}
                   </div>
                 </div>
               ))
@@ -417,6 +562,15 @@ export default function DashboardPage() {
       </div>
 
       {/* Global Modals on Dashboard */}
+      <NewReservationModal
+        isOpen={isNewReservationOpen}
+        onClose={() => setIsNewReservationOpen(false)}
+        onSuccess={() => {
+          setIsNewReservationOpen(false);
+          loadDashboard();
+        }}
+      />
+
       <ReservationDetailModal
         reservationId={selectedResId}
         isOpen={!!selectedResId}
@@ -440,3 +594,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

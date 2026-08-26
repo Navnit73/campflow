@@ -11,6 +11,10 @@ export async function GET(req: NextRequest) {
 
     const queryInput = queryPaymentsSchema.parse({
       reservationId: searchParams.get("reservationId") || undefined,
+      method: searchParams.get("method") || undefined,
+      startDate: searchParams.get("startDate") || undefined,
+      endDate: searchParams.get("endDate") || undefined,
+      search: searchParams.get("search") || undefined,
       page: searchParams.get("page") || 1,
       limit: searchParams.get("limit") || 20,
     });

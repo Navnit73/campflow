@@ -26,35 +26,42 @@ export class PaymentService {
       throw err;
     }
 
+    const isRefund = input.type === "refund";
     const payment = await Payment.create({
       organizationId: new mongoose.Types.ObjectId(organizationId),
       propertyId: new mongoose.Types.ObjectId(propertyId),
       reservationId: reservation._id,
       guestId: reservation.guestId,
+      type: input.type || "payment",
       amount: input.amount,
       currency: "USD",
       method: input.method,
       status: input.status || "completed",
       transactionReference: input.transactionReference || "",
-      notes: input.notes || "",
+      notes: input.notes || (isRefund ? "Manual refund processed" : ""),
       processedByUserId: userId ? new mongoose.Types.ObjectId(userId) : undefined,
     });
 
-    // Update reservation paidAmount and balanceDue
-    const allPayments = await Payment.find({
+    // Recalculate reservation paidAmount and balanceDue
+    const allTransactions = await Payment.find({
       reservationId: reservation._id,
       status: "completed",
     }).lean();
 
-    const totalPaid = allPayments.reduce((sum, p) => sum + p.amount, 0);
-    reservation.pricing.paidAmount = totalPaid;
-    reservation.pricing.balanceDue = Math.max(0, reservation.pricing.totalAmount - totalPaid);
+    const netPaid = allTransactions.reduce((sum, p) => {
+      const amt = Number(p.amount) || 0;
+      return p.type === "refund" ? sum - amt : sum + amt;
+    }, 0);
+
+    reservation.pricing.paidAmount = Math.max(0, netPaid);
+    reservation.pricing.balanceDue = Math.max(0, Number((reservation.pricing.totalAmount - netPaid).toFixed(2)));
     await reservation.save();
 
     // Update guest total spent
     if (reservation.guestId) {
+      const delta = isRefund ? -input.amount : input.amount;
       await Guest.findByIdAndUpdate(reservation.guestId, {
-        $inc: { totalSpent: input.amount },
+        $inc: { totalSpent: delta },
       });
     }
 
@@ -80,9 +87,31 @@ export class PaymentService {
       query.reservationId = new mongoose.Types.ObjectId(options.reservationId);
     }
 
+    if (options.method && options.method !== "all") {
+      query.method = options.method;
+    }
+
+    if (options.startDate || options.endDate) {
+      query.createdAt = {};
+      if (options.startDate) {
+        query.createdAt.$gte = new Date(options.startDate + "T00:00:00Z");
+      }
+      if (options.endDate) {
+        query.createdAt.$lte = new Date(options.endDate + "T23:59:59Z");
+      }
+    }
+
+    if (options.search && options.search.trim()) {
+      const search = options.search.trim();
+      query.$or = [
+        { transactionReference: { $regex: search, $options: "i" } },
+        { notes: { $regex: search, $options: "i" } },
+      ];
+    }
+
     const [payments, total] = await Promise.all([
       Payment.find(query)
-        .populate("reservationId", "confirmationCode checkInDate checkOutDate guestSnapshot")
+        .populate("reservationId", "confirmationCode checkInDate checkOutDate guestSnapshot siteSnapshot pricing")
         .populate("guestId", "firstName lastName email phone")
         .sort({ createdAt: -1 })
         .skip(skip)

@@ -347,16 +347,41 @@ export class ReservationService {
 
       // Recalculate pricing
       const property = await Property.findById(propertyId).lean();
+      let discountDoc: any = null;
+      if (input.discountCode || reservation.discountCode) {
+        discountDoc = await Discount.findOne({
+          propertyId: new mongoose.Types.ObjectId(propertyId),
+          code: (input.discountCode || reservation.discountCode || "").toUpperCase().trim(),
+          isActive: true,
+        }).lean();
+      }
+
       const pricing = calculatePricing({
         nightlyRate: reservation.siteSnapshot.baseRate,
         checkInDate: newCheckIn,
         checkOutDate: newCheckOut,
         taxRatePercent: property?.taxRatePercent || 0,
+        discountType: discountDoc?.type,
+        discountValue: discountDoc?.value,
         paidAmount: reservation.pricing.paidAmount,
       });
 
       reservation.numNights = pricing.numNights;
       reservation.pricing = pricing;
+      if (discountDoc) {
+        reservation.discountId = discountDoc._id;
+        reservation.discountCode = discountDoc.code;
+      }
+    }
+
+    if (input.guestSnapshot) {
+      reservation.guestSnapshot = {
+        fullName: input.guestSnapshot.fullName || reservation.guestSnapshot.fullName,
+        email: input.guestSnapshot.email || reservation.guestSnapshot.email,
+        phone: input.guestSnapshot.phone || reservation.guestSnapshot.phone,
+        rvType: input.guestSnapshot.rvType || reservation.guestSnapshot.rvType,
+        rvLengthFt: input.guestSnapshot.rvLengthFt ?? reservation.guestSnapshot.rvLengthFt,
+      };
     }
 
     if (input.adults !== undefined) reservation.adults = input.adults;

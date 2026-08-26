@@ -15,6 +15,7 @@ interface NewReservationModalProps {
   onSuccess: () => void;
   initialSiteId?: string;
   initialDate?: string;
+  initialGuest?: any;
 }
 
 export function NewReservationModal({
@@ -23,10 +24,16 @@ export function NewReservationModal({
   onSuccess,
   initialSiteId,
   initialDate,
+  initialGuest,
 }: NewReservationModalProps) {
   const { success, error } = useToast();
   const [loading, setLoading] = useState(false);
   const [sites, setSites] = useState<any[]>([]);
+  const [existingGuests, setExistingGuests] = useState<any[]>([]);
+
+  // Guest Mode: 'new' or 'existing'
+  const [guestMode, setGuestMode] = useState<"new" | "existing">("new");
+  const [selectedGuestId, setSelectedGuestId] = useState<string>("");
 
   // Form State
   const today = new Date().toISOString().split("T")[0];
@@ -51,11 +58,11 @@ export function NewReservationModal({
   const [rvLengthFt, setRvLengthFt] = useState<number | string>(30);
   const [licensePlate, setLicensePlate] = useState("");
 
-  // Payment details
+  // Payment details (Offline only)
   const [collectPaymentNow, setCollectPaymentNow] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("credit_card");
 
-  // Load sites
+  // Load sites & guests
   useEffect(() => {
     if (isOpen) {
       apiClient.get("/api/sites?status=available").then((res) => {
@@ -64,6 +71,12 @@ export function NewReservationModal({
           if (!siteId && res.data.data.length > 0) {
             setSiteId(res.data.data[0]._id);
           }
+        }
+      });
+
+      apiClient.get("/api/guests?limit=100").then((res) => {
+        if (res.data?.success) {
+          setExistingGuests(res.data.data.guests || []);
         }
       });
     }
@@ -76,10 +89,42 @@ export function NewReservationModal({
       const dOut = new Date(new Date(initialDate + "T00:00:00Z").getTime() + 2 * 24 * 60 * 60 * 1000);
       setCheckOutDate(dOut.toISOString().split("T")[0]);
     }
-  }, [initialSiteId, initialDate]);
+    if (initialGuest) {
+      setGuestMode("existing");
+      setSelectedGuestId(initialGuest._id);
+      setGuestFirstName(initialGuest.firstName);
+      setGuestLastName(initialGuest.lastName);
+      setGuestEmail(initialGuest.email);
+      setGuestPhone(initialGuest.phone);
+      if (initialGuest.rvDetails) {
+        setRvType(initialGuest.rvDetails.type || "travel_trailer");
+        setRvLengthFt(initialGuest.rvDetails.lengthFt ?? 30);
+        setLicensePlate(initialGuest.rvDetails.licensePlate || "");
+      }
+    }
+  }, [initialSiteId, initialDate, initialGuest]);
 
-  // Selected site pricing estimate
+  const handleSelectExistingGuest = (id: string) => {
+    setSelectedGuestId(id);
+    const g = existingGuests.find((guest) => guest._id === id);
+    if (g) {
+      setGuestFirstName(g.firstName);
+      setGuestLastName(g.lastName);
+      setGuestEmail(g.email);
+      setGuestPhone(g.phone);
+      if (g.rvDetails) {
+        setRvType(g.rvDetails.type || "travel_trailer");
+        setRvLengthFt(g.rvDetails.lengthFt ?? 30);
+        setLicensePlate(g.rvDetails.licensePlate || "");
+      }
+    }
+  };
+
+  // Selected site pricing estimate & compatibility
   const selectedSite = sites.find((s) => s._id === siteId);
+  const maxRig = selectedSite?.siteTypeSnapshot?.maxRigLength ?? 45;
+  const isLengthIncompatible = Number(rvLengthFt) > maxRig;
+
   const pricing = calculatePricing({
     nightlyRate: selectedSite?.currentBaseRate || 50,
     checkInDate,
@@ -111,7 +156,12 @@ export function NewReservationModal({
         specialRequests,
         notes,
         source: "admin",
-        guest: {
+      };
+
+      if (guestMode === "existing" && selectedGuestId) {
+        payload.guestId = selectedGuestId;
+      } else {
+        payload.guest = {
           firstName: guestFirstName,
           lastName: guestLastName,
           email: guestEmail,
@@ -119,20 +169,20 @@ export function NewReservationModal({
           rvType,
           rvLengthFt: Number(rvLengthFt),
           licensePlate,
-        },
-      };
+        };
+      }
 
       if (collectPaymentNow) {
         payload.initialPayment = {
           amount: pricing.totalAmount,
           method: paymentMethod,
-          notes: "Collected at reservation creation",
+          notes: "Collected at front desk reservation creation",
         };
       }
 
       const res = await apiClient.post("/api/reservations", payload);
       if (res.data?.success) {
-        success(`Reservation ${res.data.data.confirmationCode} created!`);
+        success(`Reservation ${res.data.data.confirmationCode} created successfully!`);
         onSuccess();
         onClose();
       }
@@ -148,7 +198,7 @@ export function NewReservationModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Create New Reservation"
-      subtitle="Book a site and record camper details"
+      subtitle="Book a campground site and record camper details"
       maxWidth="max-w-2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -171,11 +221,21 @@ export function NewReservationModal({
               <option value="" disabled>Select a site...</option>
               {sites.map((s) => (
                 <option key={s._id} value={s._id}>
-                  Site {s.siteNumber} — {s.siteTypeSnapshot?.name || "Standard"} ({formatCurrency(s.currentBaseRate)}/nt)
+                  Site {s.siteNumber} — {s.siteTypeSnapshot?.name || "Standard"} ({formatCurrency(s.currentBaseRate)}/nt) • Max {s.siteTypeSnapshot?.maxRigLength || 40}ft
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Compatibility Alert */}
+          {isLengthIncompatible && (
+            <div className="p-2.5 rounded-md bg-amber-50 border border-amber-200 flex items-center gap-2 text-xs text-amber-800 font-medium">
+              <span className="font-bold">⚠️ Warning:</span>
+              <span>
+                Camper rig length ({rvLengthFt}ft) exceeds Site {selectedSite?.siteNumber} clearance ({maxRig}ft).
+              </span>
+            </div>
+          )}
 
           {/* Check-In / Check-Out Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -246,10 +306,53 @@ export function NewReservationModal({
 
         {/* Section 2: Guest Information */}
         <div className="p-3 sm:p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
-          <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700 pb-1 border-b border-slate-200/60">
-            <User className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            2. Guest Profile & Rig Specs
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-200/60">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
+              <User className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              2. Guest Profile & Rig Specs
+            </div>
+
+            {/* Mode Switcher */}
+            <div className="join">
+              <button
+                type="button"
+                onClick={() => setGuestMode("new")}
+                className={`btn btn-xs join-item font-bold ${
+                  guestMode === "new" ? "bg-emerald-600 text-white" : "btn-ghost text-slate-600"
+                }`}
+              >
+                New Guest
+              </button>
+              <button
+                type="button"
+                onClick={() => setGuestMode("existing")}
+                className={`btn btn-xs join-item font-bold ${
+                  guestMode === "existing" ? "bg-emerald-600 text-white" : "btn-ghost text-slate-600"
+                }`}
+              >
+                Existing CRM Guest
+              </button>
+            </div>
           </div>
+
+          {guestMode === "existing" && (
+            <div>
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Select Existing Guest</label>
+              <select
+                value={selectedGuestId}
+                onChange={(e) => handleSelectExistingGuest(e.target.value)}
+                className="select select-bordered select-sm w-full bg-white font-medium rounded-md"
+                required={guestMode === "existing"}
+              >
+                <option value="" disabled>Select from {existingGuests.length} campers...</option>
+                {existingGuests.map((g) => (
+                  <option key={g._id} value={g._id}>
+                    {g.firstName} {g.lastName} — {g.email} ({g.phone})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="w-full">
@@ -339,15 +442,17 @@ export function NewReservationModal({
           </div>
         </div>
 
-        {/* Section 3: Billing & Optional Payment */}
+        {/* Section 3: Billing & Optional Offline Payment */}
         <div className="p-3 sm:p-4 rounded-lg border border-slate-200 bg-white space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
               <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              3. Rate & Payment
+              3. Rate & Offline Payment
             </div>
             <div className="text-right">
-              <span className="text-xs text-slate-500">{pricing.numNights} Nights • Total: </span>
+              <span className="text-xs text-slate-500 font-mono">
+                {pricing.numNights} Nights @ {formatCurrency(pricing.nightlyRate)} • Total:{" "}
+              </span>
               <span className="text-base font-black text-emerald-700 font-mono">
                 {formatCurrency(pricing.totalAmount)}
               </span>
@@ -375,7 +480,7 @@ export function NewReservationModal({
                   className="checkbox checkbox-primary checkbox-sm rounded"
                 />
                 <span className="label-text font-bold text-xs text-slate-800">
-                  Collect Full Payment Now ({formatCurrency(pricing.totalAmount)})
+                  Collect Payment Now ({formatCurrency(pricing.totalAmount)})
                 </span>
               </label>
             </div>
@@ -383,18 +488,7 @@ export function NewReservationModal({
 
           {collectPaymentNow && (
             <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200 flex flex-wrap items-center gap-3">
-              <span className="text-xs font-bold text-slate-700">Method:</span>
-              <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
-                <input
-                  type="radio"
-                  name="pm"
-                  value="credit_card"
-                  checked={paymentMethod === "credit_card"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="radio radio-primary radio-xs"
-                />
-                Credit Card
-              </label>
+              <span className="text-xs font-bold text-slate-700">Manual Method:</span>
               <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
                 <input
                   type="radio"
@@ -416,6 +510,28 @@ export function NewReservationModal({
                   className="radio radio-primary radio-xs"
                 />
                 Check
+              </label>
+              <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+                <input
+                  type="radio"
+                  name="pm"
+                  value="credit_card"
+                  checked={paymentMethod === "credit_card"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="radio radio-primary radio-xs"
+                />
+                Card (POS Terminal)
+              </label>
+              <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+                <input
+                  type="radio"
+                  name="pm"
+                  value="bank_transfer"
+                  checked={paymentMethod === "bank_transfer"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="radio radio-primary radio-xs"
+                />
+                Bank Transfer
               </label>
             </div>
           )}

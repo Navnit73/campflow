@@ -27,6 +27,11 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
   );
   const [daysCount, setDaysCount] = useState<number>(14);
   const [loading, setLoading] = useState<boolean>(true);
+  const [searchSite, setSearchSite] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [siteCategories, setSiteCategories] = useState<any[]>([]);
+
   const [chartData, setChartData] = useState<{
     sites: any[];
     reservations: any[];
@@ -35,14 +40,21 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
   const loadData = async (dateStr: string, days: number) => {
     setLoading(true);
     try {
-      const res = await apiClient.get("/api/reservations/tape-chart", {
-        params: { startDate: dateStr, days },
-      });
+      const [res, typesRes] = await Promise.all([
+        apiClient.get("/api/reservations/tape-chart", {
+          params: { startDate: dateStr, days },
+        }),
+        apiClient.get("/api/sites/types"),
+      ]);
+
       if (res.data?.success) {
         setChartData({
           sites: res.data.data.sites || [],
           reservations: res.data.data.reservations || [],
         });
+      }
+      if (typesRes.data?.success) {
+        setSiteCategories(typesRes.data.data || []);
       }
     } catch (err: any) {
       error(err?.message || "Failed to load tape chart data");
@@ -91,17 +103,33 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
   const getStatusColor = (status: string) => {
     switch (status) {
       case "checked_in":
-        return "bg-sky-600 text-white border-sky-700 hover:bg-sky-700";
+        return "bg-sky-600 text-white border-sky-700 hover:bg-sky-700 shadow-xs";
       case "confirmed":
-        return "bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700";
+        return "bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700 shadow-xs";
       case "pending":
-        return "bg-amber-500 text-slate-900 border-amber-600 hover:bg-amber-600";
+        return "bg-amber-500 text-slate-900 border-amber-600 hover:bg-amber-600 shadow-xs";
       case "checked_out":
         return "bg-slate-400 text-white border-slate-500 hover:bg-slate-500";
       default:
         return "bg-slate-500 text-white border-slate-600";
     }
   };
+
+  // Filter sites by search and category
+  const filteredSites = chartData.sites.filter((site) => {
+    if (searchSite.trim()) {
+      const q = searchSite.trim().toLowerCase();
+      const numMatch = site.siteNumber?.toLowerCase().includes(q);
+      const nameMatch = site.name?.toLowerCase().includes(q);
+      const typeMatch = site.siteTypeSnapshot?.name?.toLowerCase().includes(q);
+      if (!numMatch && !nameMatch && !typeMatch) return false;
+    }
+    if (categoryFilter !== "all") {
+      const typeId = site.siteTypeId?._id || site.siteTypeId;
+      if (typeId?.toString() !== categoryFilter) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="surface-card flex flex-col overflow-hidden rounded-lg border border-slate-200 w-full">
@@ -111,14 +139,14 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
             onClick={handleToday}
-            className="btn btn-outline btn-xs sm:btn-sm font-bold text-xs rounded-md"
+            className="btn btn-outline btn-xs sm:btn-sm font-bold text-xs rounded-md bg-white"
           >
             Today
           </button>
           <div className="join">
             <button
               onClick={handlePrev}
-              className="btn btn-outline btn-xs sm:btn-sm join-item rounded-l-md"
+              className="btn btn-outline btn-xs sm:btn-sm join-item rounded-l-md bg-white"
               aria-label="Previous 7 days"
               title="Previous 7 days"
             >
@@ -126,7 +154,7 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
             </button>
             <button
               onClick={handleNext}
-              className="btn btn-outline btn-xs sm:btn-sm join-item rounded-r-md"
+              className="btn btn-outline btn-xs sm:btn-sm join-item rounded-r-md bg-white"
               aria-label="Next 7 days"
               title="Next 7 days"
             >
@@ -143,13 +171,37 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
           </div>
         </div>
 
-        {/* Days Window Selector + Refresh */}
-        <div className="flex items-center gap-2">
+        {/* Search & Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search site # or name..."
+            value={searchSite}
+            onChange={(e) => setSearchSite(e.target.value)}
+            className="input input-bordered input-xs sm:input-sm bg-white rounded-md text-xs w-36 sm:w-48"
+          />
+
+          {siteCategories.length > 0 && (
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="select select-bordered select-xs sm:select-sm bg-white rounded-md text-xs font-medium"
+            >
+              <option value="all">All Categories</option>
+              {siteCategories.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Days Window Selector + Refresh */}
           <div className="join">
             <button
               onClick={() => setDaysCount(7)}
-              className={`btn btn-xs sm:btn-sm join-item font-bold text-xs rounded-l-md ${
-                daysCount === 7 ? "bg-emerald-600 text-white border-emerald-600" : "btn-outline"
+              className={`btn btn-xs sm:btn-sm join-item font-bold text-xs ${
+                daysCount === 7 ? "bg-emerald-600 text-white border-emerald-600" : "btn-outline bg-white"
               }`}
             >
               7D
@@ -157,15 +209,15 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
             <button
               onClick={() => setDaysCount(14)}
               className={`btn btn-xs sm:btn-sm join-item font-bold text-xs ${
-                daysCount === 14 ? "bg-emerald-600 text-white border-emerald-600" : "btn-outline"
+                daysCount === 14 ? "bg-emerald-600 text-white border-emerald-600" : "btn-outline bg-white"
               }`}
             >
               14D
             </button>
             <button
               onClick={() => setDaysCount(30)}
-              className={`btn btn-xs sm:btn-sm join-item font-bold text-xs rounded-r-md ${
-                daysCount === 30 ? "bg-emerald-600 text-white border-emerald-600" : "btn-outline"
+              className={`btn btn-xs sm:btn-sm join-item font-bold text-xs ${
+                daysCount === 30 ? "bg-emerald-600 text-white border-emerald-600" : "btn-outline bg-white"
               }`}
             >
               30D
@@ -212,7 +264,7 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
           <div className="flex border-b border-slate-200 bg-slate-100 sticky top-0 z-20">
             {/* Responsive Site Column Header */}
             <div className="w-32 sm:w-44 md:w-56 shrink-0 p-2 sm:p-2.5 font-bold text-[11px] sm:text-xs uppercase tracking-wider text-slate-600 border-r border-slate-200 sticky left-0 bg-slate-100 z-30 flex items-center justify-between shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-              <span>Site ({chartData.sites.length})</span>
+              <span>Sites ({filteredSites.length})</span>
               <span className="hidden sm:inline text-[10px] text-slate-400 font-normal">Rate</span>
             </div>
 
@@ -242,21 +294,17 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
           </div>
 
           {/* Body Rows */}
-          {loading && chartData.sites.length === 0 ? (
+          {loading && filteredSites.length === 0 ? (
             <div className="p-10 sm:p-14 text-center text-slate-500 space-y-2">
               <RefreshCw className="w-5 h-5 animate-spin mx-auto text-emerald-600 mb-1" />
               <p className="text-xs font-semibold">Loading tape chart calendar...</p>
             </div>
-          ) : chartData.sites.length === 0 ? (
+          ) : filteredSites.length === 0 ? (
             <div className="p-10 sm:p-14 text-center text-slate-500 space-y-3">
-              <p className="text-xs font-medium">No sites created yet in your campground inventory.</p>
-              <Link href="/sites" className="btn btn-primary btn-sm gap-1.5 font-bold rounded-md">
-                <PlusCircle className="w-4 h-4" />
-                Add Your First Site
-              </Link>
+              <p className="text-xs font-medium">No sites match the current search or category filter.</p>
             </div>
           ) : (
-            chartData.sites.map((site) => {
+            filteredSites.map((site) => {
               const siteReservations = chartData.reservations.filter(
                 (r) => r.siteId === site._id || r.siteId?._id === site._id
               );

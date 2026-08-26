@@ -29,9 +29,13 @@ export interface ISite extends Document {
     maxRigLength: number;
   };
   currentBaseRate: number;
+  weekendBaseRate?: number;
   surfaceType: SurfaceType;
   rigType: RigType;
+  petFriendly: boolean;
   amenities: string[];
+  photos?: string[];
+  description?: string;
   notes?: string;
   sortOrder: number;
   createdAt: Date;
@@ -88,6 +92,10 @@ const SiteSchema = new Schema<ISite>(
       required: true,
       min: 0,
     },
+    weekendBaseRate: {
+      type: Number,
+      min: 0,
+    },
     surfaceType: {
       type: String,
       enum: SURFACE_TYPES,
@@ -98,7 +106,16 @@ const SiteSchema = new Schema<ISite>(
       enum: RIG_TYPES,
       default: "back_in",
     },
+    petFriendly: {
+      type: Boolean,
+      default: true,
+    },
     amenities: [{ type: String }],
+    photos: [{ type: String }],
+    description: {
+      type: String,
+      default: "",
+    },
     notes: {
       type: String,
       default: "",

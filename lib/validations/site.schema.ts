@@ -13,6 +13,7 @@ export const createSiteTypeSchema = z.object({
   defaultBaseRate: z.coerce.number().min(0, "Base rate must be positive"),
   maxOccupancy: z.coerce.number().min(1, "Max occupancy must be at least 1").default(6),
   description: z.string().optional().default(""),
+  photos: z.array(z.string()).optional().default([]),
 });
 
 export const updateSiteTypeSchema = createSiteTypeSchema.partial();
@@ -23,9 +24,13 @@ export const createSiteSchema = z.object({
   siteTypeId: z.string().min(1, "Site type selection is required"),
   status: z.enum(["available", "maintenance", "inactive"]).default("available"),
   currentBaseRate: z.coerce.number().min(0, "Nightly rate must be positive").optional(),
+  weekendBaseRate: z.coerce.number().min(0).optional(),
   surfaceType: z.enum(SURFACE_TYPES).default("gravel"),
   rigType: z.enum(RIG_TYPES).default("back_in"),
+  petFriendly: z.boolean().optional().default(true),
   amenities: z.array(z.string()).optional().default([]),
+  photos: z.array(z.string()).optional().default([]),
+  description: z.string().optional().default(""),
   notes: z.string().optional().default(""),
   sortOrder: z.coerce.number().optional().default(0),
 });

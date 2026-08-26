@@ -86,9 +86,13 @@ export class SiteService {
         maxRigLength: siteType.maxRigLength,
       },
       currentBaseRate: input.currentBaseRate !== undefined ? input.currentBaseRate : siteType.defaultBaseRate,
+      weekendBaseRate: input.weekendBaseRate,
       surfaceType: input.surfaceType,
       rigType: input.rigType,
+      petFriendly: input.petFriendly ?? true,
       amenities: input.amenities || [],
+      photos: input.photos || [],
+      description: input.description || "",
       notes: input.notes || "",
       sortOrder: input.sortOrder || 0,
     });
@@ -150,9 +154,13 @@ export class SiteService {
     if (input.name !== undefined) site.name = input.name;
     if (input.status !== undefined) site.status = input.status;
     if (input.currentBaseRate !== undefined) site.currentBaseRate = input.currentBaseRate;
+    if (input.weekendBaseRate !== undefined) site.weekendBaseRate = input.weekendBaseRate;
     if (input.surfaceType !== undefined) site.surfaceType = input.surfaceType;
     if (input.rigType !== undefined) site.rigType = input.rigType;
+    if (input.petFriendly !== undefined) site.petFriendly = input.petFriendly;
     if (input.amenities !== undefined) site.amenities = input.amenities;
+    if (input.photos !== undefined) site.photos = input.photos;
+    if (input.description !== undefined) site.description = input.description;
     if (input.notes !== undefined) site.notes = input.notes;
     if (input.sortOrder !== undefined) site.sortOrder = input.sortOrder;
 

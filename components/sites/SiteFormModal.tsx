@@ -31,8 +31,12 @@ export function SiteFormModal({
   const [siteTypeId, setSiteTypeId] = useState("");
   const [status, setStatus] = useState<string>("available");
   const [currentBaseRate, setCurrentBaseRate] = useState<number | string>(55);
+  const [weekendBaseRate, setWeekendBaseRate] = useState<number | string>("");
   const [surfaceType, setSurfaceType] = useState<string>("gravel");
   const [rigType, setRigType] = useState<string>("back_in");
+  const [petFriendly, setPetFriendly] = useState(true);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [description, setDescription] = useState("");
   const [amenitiesStr, setAmenitiesStr] = useState("Picnic Table, Fire Pit, Free Wi-Fi");
   const [notes, setNotes] = useState("");
 
@@ -43,8 +47,12 @@ export function SiteFormModal({
       setSiteTypeId(siteToEdit.siteTypeId?._id || siteToEdit.siteTypeId || "");
       setStatus(siteToEdit.status || "available");
       setCurrentBaseRate(siteToEdit.currentBaseRate || 55);
+      setWeekendBaseRate(siteToEdit.weekendBaseRate || "");
       setSurfaceType(siteToEdit.surfaceType || "gravel");
       setRigType(siteToEdit.rigType || "back_in");
+      setPetFriendly(siteToEdit.petFriendly ?? true);
+      setPhotoUrl(siteToEdit.photos?.[0] || "");
+      setDescription(siteToEdit.description || "");
       setAmenitiesStr((siteToEdit.amenities || []).join(", "));
       setNotes(siteToEdit.notes || "");
     } else {
@@ -53,8 +61,12 @@ export function SiteFormModal({
       setSiteTypeId(siteTypes.length > 0 ? siteTypes[0]._id : "");
       setStatus("available");
       setCurrentBaseRate(siteTypes.length > 0 ? siteTypes[0].defaultBaseRate : 55);
+      setWeekendBaseRate("");
       setSurfaceType("gravel");
       setRigType("back_in");
+      setPetFriendly(true);
+      setPhotoUrl("");
+      setDescription("");
       setAmenitiesStr("Picnic Table, Fire Pit, Free Wi-Fi");
       setNotes("");
     }
@@ -74,14 +86,18 @@ export function SiteFormModal({
         .map((s) => s.trim())
         .filter(Boolean);
 
-      const payload = {
+      const payload: any = {
         siteNumber,
         name: name || `Site ${siteNumber}`,
         siteTypeId,
         status,
         currentBaseRate: Number(currentBaseRate),
+        weekendBaseRate: weekendBaseRate !== "" ? Number(weekendBaseRate) : undefined,
         surfaceType,
         rigType,
+        petFriendly,
+        photos: photoUrl ? [photoUrl.trim()] : [],
+        description: description.trim(),
         amenities,
         notes,
       };
@@ -154,7 +170,7 @@ export function SiteFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <label className="label text-xs font-bold text-slate-700 py-0.5">Nightly Rate ($)</label>
             <input
@@ -170,11 +186,25 @@ export function SiteFormModal({
           </div>
 
           <div>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Weekend Rate ($ opt)</label>
+            <input
+              type="number"
+              min={0}
+              step="1"
+              placeholder="e.g. 65"
+              value={weekendBaseRate}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setWeekendBaseRate(e.target.value === "" ? "" : Number(e.target.value))}
+              className="input input-bordered input-sm w-full font-bold font-mono text-emerald-700 rounded-md"
+            />
+          </div>
+
+          <div>
             <label className="label text-xs font-bold text-slate-700 py-0.5">Rig Access Type</label>
             <select
               value={rigType}
               onChange={(e) => setRigType(e.target.value)}
-              className="select select-bordered select-sm w-full font-medium rounded-md"
+              className="select select-bordered select-sm w-full font-medium rounded-md text-xs"
             >
               {RIG_TYPES.map((r) => (
                 <option key={r} value={r}>
@@ -189,7 +219,7 @@ export function SiteFormModal({
             <select
               value={surfaceType}
               onChange={(e) => setSurfaceType(e.target.value)}
-              className="select select-bordered select-sm w-full capitalize rounded-md"
+              className="select select-bordered select-sm w-full capitalize rounded-md text-xs"
             >
               {SURFACE_TYPES.map((s) => (
                 <option key={s} value={s}>
@@ -200,13 +230,13 @@ export function SiteFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="label text-xs font-bold text-slate-700 py-0.5">Operational Status</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="select select-bordered select-sm w-full font-medium rounded-md"
+              className="select select-bordered select-sm w-full font-medium rounded-md text-xs"
             >
               <option value="available">Available for Booking</option>
               <option value="maintenance">Under Maintenance</option>
@@ -224,16 +254,54 @@ export function SiteFormModal({
               className="input input-bordered input-sm w-full rounded-md"
             />
           </div>
+
+          <div className="flex items-center pt-5">
+            <label className="cursor-pointer label gap-2 py-0">
+              <input
+                type="checkbox"
+                checked={petFriendly}
+                onChange={(e) => setPetFriendly(e.target.checked)}
+                className="checkbox checkbox-primary checkbox-sm rounded"
+              />
+              <span className="label-text text-xs font-bold text-slate-800">
+                🐾 Pet Friendly Site
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Photo Image URL (optional)</label>
+            <input
+              type="url"
+              placeholder="https://images.unsplash.com/..."
+              value={photoUrl}
+              onChange={(e) => setPhotoUrl(e.target.value)}
+              className="input input-bordered input-sm w-full font-mono text-xs rounded-md"
+            />
+          </div>
+
+          <div>
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Amenities (comma-separated)</label>
+            <input
+              type="text"
+              placeholder="Picnic Table, Fire Pit, Shade, Concrete Pad"
+              value={amenitiesStr}
+              onChange={(e) => setAmenitiesStr(e.target.value)}
+              className="input input-bordered input-sm w-full rounded-md text-xs"
+            />
+          </div>
         </div>
 
         <div>
-          <label className="label text-xs font-bold text-slate-700 py-0.5">Amenities (comma-separated)</label>
-          <input
-            type="text"
-            placeholder="Picnic Table, Fire Pit, Shade, Concrete Pad"
-            value={amenitiesStr}
-            onChange={(e) => setAmenitiesStr(e.target.value)}
-            className="input input-bordered input-sm w-full rounded-md"
+          <label className="label text-xs font-bold text-slate-700 py-0.5">Site Description</label>
+          <textarea
+            placeholder="Special scenic features, shade coverage, proximity to river or clubhouse..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="textarea textarea-bordered textarea-sm w-full rounded-md"
+            rows={2}
           />
         </div>
 
