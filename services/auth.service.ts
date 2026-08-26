@@ -167,8 +167,14 @@ export class AuthService {
         token,
       };
     } catch (err) {
-      await session.abortTransaction();
-      session.endSession();
+      if (createdOrgId) {
+        await Promise.all([
+          User.deleteMany({ organizationId: createdOrgId }),
+          Property.deleteMany({ organizationId: createdOrgId }),
+          SiteType.deleteMany({ organizationId: createdOrgId }),
+          Organization.deleteOne({ _id: createdOrgId }),
+        ]).catch(() => {});
+      }
       throw err;
     }
   }
