@@ -16,6 +16,8 @@ import {
   X,
 } from "lucide-react";
 
+import { useAuth } from "@/hooks/useAuth";
+
 interface NavItem {
   name: string;
   href: string;
@@ -39,6 +41,7 @@ interface SidebarProps {
 
 export function Sidebar({ onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
+  const { property } = useAuth();
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between h-full p-3 text-slate-800 shrink-0">
@@ -105,7 +108,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
       {/* Quick Booking link pinned at bottom of sidebar */}
       <div className="pt-3 border-t border-slate-100">
         <Link
-          href="/book/campflow-rv-resort"
+          href={`/book/${property?.slug || "campflow-rv-resort"}`}
           target="_blank"
           className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 transition-colors w-full"
         >

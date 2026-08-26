@@ -23,9 +23,9 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
   const [electric, setElectric] = useState<string>("50A");
   const [water, setWater] = useState(true);
   const [sewer, setSewer] = useState(true);
-  const [maxRigLength, setMaxRigLength] = useState<number>(45);
-  const [defaultBaseRate, setDefaultBaseRate] = useState<number>(65);
-  const [maxOccupancy, setMaxOccupancy] = useState<number>(6);
+  const [maxRigLength, setMaxRigLength] = useState<number | string>(45);
+  const [defaultBaseRate, setDefaultBaseRate] = useState<number | string>(65);
+  const [maxOccupancy, setMaxOccupancy] = useState<number | string>(6);
   const [description, setDescription] = useState("");
 
   useEffect(() => {
@@ -137,7 +137,8 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
               min={0}
               step="1"
               value={defaultBaseRate}
-              onChange={(e) => setDefaultBaseRate(Number(e.target.value))}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setDefaultBaseRate(e.target.value === "" ? "" : Number(e.target.value))}
               className="input input-bordered input-sm w-full font-mono font-bold text-emerald-700 rounded-md"
               required
             />
@@ -199,7 +200,8 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
               min={0}
               max={65}
               value={maxRigLength}
-              onChange={(e) => setMaxRigLength(Number(e.target.value))}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setMaxRigLength(e.target.value === "" ? "" : Number(e.target.value))}
               className="input input-bordered input-sm w-full font-mono rounded-md"
             />
           </div>
@@ -211,7 +213,8 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
               min={1}
               max={15}
               value={maxOccupancy}
-              onChange={(e) => setMaxOccupancy(Number(e.target.value))}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setMaxOccupancy(e.target.value === "" ? "" : Number(e.target.value))}
               className="input input-bordered input-sm w-full rounded-md"
             />
           </div>

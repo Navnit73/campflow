@@ -36,11 +36,11 @@ export default function PublicBookingPage() {
   const [checkInDate, setCheckInDate] = useState(todayStr);
   const [checkOutDate, setCheckOutDate] = useState(defaultOut);
   const [rvType, setRvType] = useState("travel_trailer");
-  const [rigLengthFt, setRigLengthFt] = useState<number>(30);
+  const [rigLengthFt, setRigLengthFt] = useState<number | string>(30);
   const [hookupType, setHookupType] = useState<string>("any");
-  const [adults, setAdults] = useState<number>(2);
-  const [children, setChildren] = useState<number>(0);
-  const [pets, setPets] = useState<number>(0);
+  const [adults, setAdults] = useState<number | string>(2);
+  const [children, setChildren] = useState<number | string>(0);
+  const [pets, setPets] = useState<number | string>(0);
 
   // Results & Selection
   const [property, setProperty] = useState<any | null>(null);
@@ -70,11 +70,11 @@ export default function PublicBookingPage() {
           checkInDate,
           checkOutDate,
           rvType,
-          rigLengthFt,
+          rigLengthFt: Number(rigLengthFt || 30),
           hookupType: hookupType !== "any" ? hookupType : undefined,
-          adults,
-          children,
-          pets,
+          adults: Number(adults || 2),
+          children: Number(children || 0),
+          pets: Number(pets || 0),
         },
       });
 
@@ -93,7 +93,13 @@ export default function PublicBookingPage() {
   useEffect(() => {
     apiClient
       .get("/api/public/book/availability", {
-        params: { slug, checkInDate, checkOutDate, rvType, rigLengthFt },
+        params: {
+          slug,
+          checkInDate,
+          checkOutDate,
+          rvType,
+          rigLengthFt: Number(rigLengthFt || 30),
+        },
       })
       .then((res) => {
         if (res.data?.success) {
@@ -122,9 +128,9 @@ export default function PublicBookingPage() {
         siteId: selectedSite._id,
         checkInDate,
         checkOutDate,
-        adults,
-        children,
-        pets,
+        adults: Number(adults || 2),
+        children: Number(children || 0),
+        pets: Number(pets || 0),
         discountCode: discountCode || undefined,
         guest: {
           firstName,
@@ -301,7 +307,8 @@ export default function PublicBookingPage() {
                       min={0}
                       max={55}
                       value={rigLengthFt}
-                      onChange={(e) => setRigLengthFt(Number(e.target.value))}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setRigLengthFt(e.target.value === "" ? "" : Number(e.target.value))}
                       className="input input-bordered input-sm w-full font-mono font-bold bg-white rounded-md"
                     />
                   </div>
@@ -331,7 +338,8 @@ export default function PublicBookingPage() {
                     min={1}
                     max={8}
                     value={adults}
-                    onChange={(e) => setAdults(Number(e.target.value))}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setAdults(e.target.value === "" ? "" : Number(e.target.value))}
                     className="input input-bordered input-sm w-full rounded-md"
                   />
                 </div>
@@ -342,7 +350,8 @@ export default function PublicBookingPage() {
                     min={0}
                     max={6}
                     value={children}
-                    onChange={(e) => setChildren(Number(e.target.value))}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setChildren(e.target.value === "" ? "" : Number(e.target.value))}
                     className="input input-bordered input-sm w-full rounded-md"
                   />
                 </div>
@@ -353,7 +362,8 @@ export default function PublicBookingPage() {
                     min={0}
                     max={4}
                     value={pets}
-                    onChange={(e) => setPets(Number(e.target.value))}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setPets(e.target.value === "" ? "" : Number(e.target.value))}
                     className="input input-bordered input-sm w-full rounded-md"
                   />
                 </div>

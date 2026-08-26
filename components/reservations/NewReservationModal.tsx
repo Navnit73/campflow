@@ -35,9 +35,9 @@ export function NewReservationModal({
   const [siteId, setSiteId] = useState(initialSiteId || "");
   const [checkInDate, setCheckInDate] = useState(initialDate || today);
   const [checkOutDate, setCheckOutDate] = useState(tomorrow);
-  const [adults, setAdults] = useState(2);
-  const [children, setChildren] = useState(0);
-  const [pets, setPets] = useState(0);
+  const [adults, setAdults] = useState<number | string>(2);
+  const [children, setChildren] = useState<number | string>(0);
+  const [pets, setPets] = useState<number | string>(0);
   const [discountCode, setDiscountCode] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
   const [notes, setNotes] = useState("");
@@ -48,7 +48,7 @@ export function NewReservationModal({
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [rvType, setRvType] = useState<string>("travel_trailer");
-  const [rvLengthFt, setRvLengthFt] = useState<number>(30);
+  const [rvLengthFt, setRvLengthFt] = useState<number | string>(30);
   const [licensePlate, setLicensePlate] = useState("");
 
   // Payment details
@@ -212,7 +212,8 @@ export function NewReservationModal({
                 min={1}
                 max={12}
                 value={adults}
-                onChange={(e) => setAdults(Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setAdults(e.target.value === "" ? "" : Number(e.target.value))}
                 className="input input-bordered input-sm w-full bg-white rounded-md font-mono text-center sm:text-left"
               />
             </div>
@@ -223,7 +224,8 @@ export function NewReservationModal({
                 min={0}
                 max={10}
                 value={children}
-                onChange={(e) => setChildren(Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setChildren(e.target.value === "" ? "" : Number(e.target.value))}
                 className="input input-bordered input-sm w-full bg-white rounded-md font-mono text-center sm:text-left"
               />
             </div>
@@ -234,7 +236,8 @@ export function NewReservationModal({
                 min={0}
                 max={6}
                 value={pets}
-                onChange={(e) => setPets(Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setPets(e.target.value === "" ? "" : Number(e.target.value))}
                 className="input input-bordered input-sm w-full bg-white rounded-md font-mono text-center sm:text-left"
               />
             </div>
@@ -318,7 +321,8 @@ export function NewReservationModal({
                 min={0}
                 max={60}
                 value={rvLengthFt}
-                onChange={(e) => setRvLengthFt(Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setRvLengthFt(e.target.value === "" ? "" : Number(e.target.value))}
                 className="input input-bordered input-sm w-full font-mono bg-white rounded-md"
               />
             </div>

@@ -30,7 +30,7 @@ export function SiteFormModal({
   const [name, setName] = useState("");
   const [siteTypeId, setSiteTypeId] = useState("");
   const [status, setStatus] = useState<string>("available");
-  const [currentBaseRate, setCurrentBaseRate] = useState<number>(55);
+  const [currentBaseRate, setCurrentBaseRate] = useState<number | string>(55);
   const [surfaceType, setSurfaceType] = useState<string>("gravel");
   const [rigType, setRigType] = useState<string>("back_in");
   const [amenitiesStr, setAmenitiesStr] = useState("Picnic Table, Fire Pit, Free Wi-Fi");
@@ -162,7 +162,8 @@ export function SiteFormModal({
               min={0}
               step="1"
               value={currentBaseRate}
-              onChange={(e) => setCurrentBaseRate(Number(e.target.value))}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setCurrentBaseRate(e.target.value === "" ? "" : Number(e.target.value))}
               className="input input-bordered input-sm w-full font-bold font-mono text-emerald-700 rounded-md"
               required
             />

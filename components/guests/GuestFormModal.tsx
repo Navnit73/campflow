@@ -33,7 +33,7 @@ export function GuestFormModal({
   const [state, setState] = useState("");
   const [zip, setZip] = useState("");
   const [rvType, setRvType] = useState<string>("travel_trailer");
-  const [rvLengthFt, setRvLengthFt] = useState<number>(30);
+  const [rvLengthFt, setRvLengthFt] = useState<number | string>(30);
   const [licensePlate, setLicensePlate] = useState("");
   const [makeModel, setMakeModel] = useState("");
   const [notes, setNotes] = useState("");
@@ -211,7 +211,8 @@ export function GuestFormModal({
                 min={0}
                 max={60}
                 value={rvLengthFt}
-                onChange={(e) => setRvLengthFt(Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setRvLengthFt(e.target.value === "" ? "" : Number(e.target.value))}
                 className="input input-bordered input-xs w-full font-mono bg-white rounded-md"
               />
             </div>

@@ -20,7 +20,7 @@ export default function SettingsPage() {
   const [email, setEmail] = useState(property?.email || "admin@campflow.com");
   const [checkInTime, setCheckInTime] = useState(property?.checkInTime || "13:00");
   const [checkOutTime, setCheckOutTime] = useState(property?.checkOutTime || "11:00");
-  const [taxRate, setTaxRate] = useState(property?.taxRatePercent ?? 7.5);
+  const [taxRate, setTaxRate] = useState<number | string>(property?.taxRatePercent ?? 7.5);
   const [quietHours, setQuietHours] = useState(property?.quietHours || "10:00 PM - 7:00 AM");
 
   const handleSave = (e: React.FormEvent) => {
@@ -132,7 +132,8 @@ export default function SettingsPage() {
                 min="0"
                 max="30"
                 value={taxRate}
-                onChange={(e) => setTaxRate(Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setTaxRate(e.target.value === "" ? "" : Number(e.target.value))}
                 className="input input-bordered input-sm w-full font-mono font-bold text-emerald-700 rounded-md"
               />
             </div>

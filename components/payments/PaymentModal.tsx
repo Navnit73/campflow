@@ -17,7 +17,7 @@ interface PaymentModalProps {
 export function PaymentModal({ reservation, isOpen, onClose, onSuccess }: PaymentModalProps) {
   const { success, error } = useToast();
   const [loading, setLoading] = useState(false);
-  const [amount, setAmount] = useState<number>(0);
+  const [amount, setAmount] = useState<number | string>(0);
   const [method, setMethod] = useState<string>("credit_card");
   const [transactionReference, setTransactionReference] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
@@ -33,7 +33,8 @@ export function PaymentModal({ reservation, isOpen, onClose, onSuccess }: Paymen
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reservation) return;
-    if (amount <= 0) {
+    const numericAmount = Number(amount || 0);
+    if (numericAmount <= 0) {
       error("Payment amount must be greater than zero");
       return;
     }
@@ -50,7 +51,7 @@ export function PaymentModal({ reservation, isOpen, onClose, onSuccess }: Paymen
       });
 
       if (res.data?.success) {
-        success(`Payment of ${formatCurrency(amount)} recorded successfully!`);
+        success(`Payment of ${formatCurrency(Number(amount || 0))} recorded successfully!`);
         onSuccess();
         onClose();
       }
@@ -89,7 +90,8 @@ export function PaymentModal({ reservation, isOpen, onClose, onSuccess }: Paymen
               min="0.01"
               max="10000"
               value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setAmount(e.target.value === "" ? "" : Number(e.target.value))}
               className="input input-bordered input-sm w-full pl-7 font-bold font-mono text-emerald-700 text-sm rounded-md"
               required
             />
