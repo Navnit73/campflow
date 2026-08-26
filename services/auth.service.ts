@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { signAuthToken } from "@/lib/auth/jwt";
 import { LoginInput, RegisterInput } from "@/lib/validations/auth.schema";
 import { connectDB } from "@/lib/db/connection";
+import { MailService } from "@/services/mail.service";
 
 function slugify(text: string): string {
   return text
@@ -145,6 +146,14 @@ export class AuthService {
         name: user.name,
       });
 
+      // Send Welcome Registration Email asynchronously
+      MailService.sendRegistrationWelcome({
+        to: user.email,
+        userName: user.name,
+        organizationName: organization.name,
+        propertyName: property.name,
+      }).catch((err) => console.error("[Mail Error] Failed to send welcome email:", err));
+
       return {
         user: {
           id: user._id.toString(),
@@ -215,6 +224,13 @@ export class AuthService {
       role: user.role,
       name: user.name,
     });
+
+    // Send Login Security Alert asynchronously
+    MailService.sendLoginAlert({
+      to: user.email,
+      userName: user.name,
+      loginTime: new Date().toLocaleString("en-US", { timeZone: property.timezone || "America/Denver" }),
+    }).catch((err) => console.error("[Mail Error] Failed to send login alert:", err));
 
     return {
       user: {

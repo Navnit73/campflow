@@ -14,6 +14,7 @@ import { calculatePricing } from "@/lib/utils/pricing";
 import { generateConfirmationCode } from "@/lib/utils/code-generator";
 import { connectDB } from "@/lib/db/connection";
 import { parseDateOnly } from "@/lib/utils/date";
+import { MailService } from "@/services/mail.service";
 
 export class PublicBookingService {
   static async getPropertyBySlug(slug: string) {
@@ -306,6 +307,36 @@ export class PublicBookingService {
     if (discountDoc) {
       await Discount.findByIdAndUpdate(discountDoc._id, { $inc: { usageCount: 1 } });
     }
+
+    // Send Booking Confirmation Email asynchronously
+    MailService.sendBookingConfirmation({
+      to: guest.email,
+      confirmationCode,
+      guestName: `${guest.firstName} ${guest.lastName}`,
+      propertyName: property.name,
+      propertyPhone: property.phone,
+      propertyEmail: property.email,
+      propertyAddress: property.address ? `${property.address.street}, ${property.address.city}, ${property.address.state} ${property.address.zip}` : undefined,
+      siteNumber: site.siteNumber,
+      siteTypeName: site.siteTypeSnapshot?.name || "RV Campsite",
+      checkInDate: dIn,
+      checkOutDate: dOut,
+      numNights: pricing.numNights,
+      adults: input.adults,
+      children: input.children,
+      pets: input.pets,
+      pricing: {
+        nightlyRate: site.currentBaseRate,
+        baseSubtotal: pricing.baseSubtotal,
+        addOnsSubtotal: pricing.addOnsSubtotal,
+        taxAmount: pricing.taxAmount,
+        totalAmount: pricing.totalAmount,
+        paidAmount: pricing.paidAmount,
+        balanceDue: pricing.balanceDue,
+      },
+      addOns: pricing.calculatedAddOns,
+      slug: property.slug,
+    }).catch((err) => console.error("[Mail Error] Failed to send booking confirmation email:", err));
 
     return {
       confirmationCode,

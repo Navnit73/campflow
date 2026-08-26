@@ -14,6 +14,7 @@ import { calculatePricing } from "@/lib/utils/pricing";
 import { generateConfirmationCode } from "@/lib/utils/code-generator";
 import { connectDB } from "@/lib/db/connection";
 import { parseDateOnly, formatDateKey, addDays } from "@/lib/utils/date";
+import { MailService } from "@/services/mail.service";
 
 export class ReservationService {
   static async checkSiteAvailability(
@@ -314,6 +315,38 @@ export class ReservationService {
 
     if (discountDoc) {
       await Discount.findByIdAndUpdate(discountDoc._id, { $inc: { usageCount: 1 } });
+    }
+
+    // Send Booking Confirmation Email asynchronously to camper
+    if (guestSnapshot?.email) {
+      MailService.sendBookingConfirmation({
+        to: guestSnapshot.email,
+        confirmationCode,
+        guestName: guestSnapshot.fullName,
+        propertyName: property?.name || "CampFlow RV Resort",
+        propertyPhone: property?.phone,
+        propertyEmail: property?.email,
+        propertyAddress: property?.address ? `${property.address.street}, ${property.address.city}, ${property.address.state} ${property.address.zip}` : undefined,
+        siteNumber: site.siteNumber,
+        siteTypeName: site.siteTypeSnapshot.name,
+        checkInDate: dIn,
+        checkOutDate: dOut,
+        numNights: pricing.numNights,
+        adults: input.adults || 2,
+        children: input.children || 0,
+        pets: input.pets || 0,
+        pricing: {
+          nightlyRate: site.currentBaseRate,
+          baseSubtotal: pricing.baseSubtotal,
+          addOnsSubtotal: pricing.addOnsSubtotal,
+          taxAmount: pricing.taxAmount,
+          totalAmount: pricing.totalAmount,
+          paidAmount: pricing.paidAmount,
+          balanceDue: pricing.balanceDue,
+        },
+        addOns: pricing.calculatedAddOns,
+        slug: property?.slug,
+      }).catch((err) => console.error("[Mail Error] Failed to send desk booking confirmation email:", err));
     }
 
     return reservation.toObject();

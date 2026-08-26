@@ -20,7 +20,9 @@ import {
   ChevronRight,
   Inbox,
   CalendarPlus,
+  Megaphone,
 } from "lucide-react";
+import { BroadcastModal } from "@/components/communications/BroadcastModal";
 
 export default function GuestsPage() {
   const { error } = useToast();
@@ -31,6 +33,7 @@ export default function GuestsPage() {
 
   // Modals
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [guestToEdit, setGuestToEdit] = useState<any | null>(null);
   const [inspectGuestId, setInspectGuestId] = useState<string | null>(null);
   const [guestDetails, setGuestDetails] = useState<any | null>(null);
@@ -92,6 +95,13 @@ export default function GuestsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsBroadcastModalOpen(true)}
+            className="btn btn-outline btn-sm gap-1.5 font-bold text-xs rounded-md bg-white hover:bg-slate-50"
+          >
+            <Megaphone className="w-3.5 h-3.5 text-emerald-600" />
+            Broadcast to Guests
+          </button>
           <button
             onClick={() => {
               setGuestToEdit(null);
@@ -402,6 +412,14 @@ export default function GuestsPage() {
           setBookingGuest(null);
           fetchGuests(pagination.page);
         }}
+      />
+
+      {/* Broadcast Announcement Modal */}
+      <BroadcastModal
+        isOpen={isBroadcastModalOpen}
+        onClose={() => setIsBroadcastModalOpen(false)}
+        onSuccess={() => fetchGuests(pagination.page)}
+        initialFilter="all_guests"
       />
     </div>
   );
