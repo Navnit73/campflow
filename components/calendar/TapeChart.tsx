@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import apiClient from "@/lib/axios/client";
 import { useToast } from "@/components/ui/Toast";
 import { HookupIcons } from "@/components/ui/HookupIcons";
-import { formatCurrency, formatHookup, formatRigType } from "@/lib/utils/format";
+import { formatCurrency } from "@/lib/utils/format";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -100,11 +100,15 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
   };
 
   return (
-    <div className="surface-card flex flex-col overflow-hidden rounded-lg border border-slate-200">
-      {/* Tape Chart Top Controls */}
-      <div className="p-3 sm:p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={handleToday} className="btn btn-outline btn-xs sm:btn-sm font-bold text-xs rounded-md">
+    <div className="surface-card flex flex-col overflow-hidden rounded-lg border border-slate-200 w-full">
+      {/* Tape Chart Top Controls - Fully Responsive */}
+      <div className="p-2.5 sm:p-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5 bg-slate-50">
+        {/* Navigation & Date Picker */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <button
+            onClick={handleToday}
+            className="btn btn-outline btn-xs sm:btn-sm font-bold text-xs rounded-md"
+          >
             Today
           </button>
           <div className="join">
@@ -112,30 +116,31 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
               onClick={handlePrev}
               className="btn btn-outline btn-xs sm:btn-sm join-item rounded-l-md"
               aria-label="Previous 7 days"
+              title="Previous 7 days"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
             <button
               onClick={handleNext}
               className="btn btn-outline btn-xs sm:btn-sm join-item rounded-r-md"
               aria-label="Next 7 days"
+              title="Next 7 days"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
-          <div className="flex items-center gap-1.5 pl-1">
-            <CalendarIcon className="w-4 h-4 text-slate-500" />
+          <div className="flex items-center gap-1">
             <input
               type="date"
               value={startDateStr}
               onChange={(e) => setStartDateStr(e.target.value)}
-              className="input input-bordered input-xs sm:input-sm font-medium bg-white rounded-md"
+              className="input input-bordered input-xs sm:input-sm font-medium bg-white rounded-md text-xs"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          {/* Days selector */}
+        {/* Days Window Selector + Refresh */}
+        <div className="flex items-center gap-2">
           <div className="join">
             <button
               onClick={() => setDaysCount(7)}
@@ -143,7 +148,7 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
                 daysCount === 7 ? "bg-emerald-600 text-white border-emerald-600" : "btn-outline"
               }`}
             >
-              7 Days
+              7D
             </button>
             <button
               onClick={() => setDaysCount(14)}
@@ -151,7 +156,7 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
                 daysCount === 14 ? "bg-emerald-600 text-white border-emerald-600" : "btn-outline"
               }`}
             >
-              14 Days
+              14D
             </button>
             <button
               onClick={() => setDaysCount(30)}
@@ -159,7 +164,7 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
                 daysCount === 30 ? "bg-emerald-600 text-white border-emerald-600" : "btn-outline"
               }`}
             >
-              30 Days
+              30D
             </button>
           </div>
 
@@ -169,52 +174,53 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
             title="Refresh Timeline"
             aria-label="Refresh Timeline"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-emerald-600" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? "animate-spin text-emerald-600" : ""}`} />
           </button>
         </div>
       </div>
 
       {/* Status Legend */}
-      <div className="px-4 py-2 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between text-xs gap-3">
-        <div className="flex flex-wrap items-center gap-3.5">
-          <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Legend:</span>
-          <span className="inline-flex items-center gap-1 font-semibold text-slate-700 text-xs">
+      <div className="px-3 sm:px-4 py-2 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between text-xs gap-2">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3.5 text-[11px] sm:text-xs">
+          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Legend:</span>
+          <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
             <span className="w-2 h-2 rounded-full bg-emerald-600"></span> Confirmed
           </span>
-          <span className="inline-flex items-center gap-1 font-semibold text-slate-700 text-xs">
+          <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
             <span className="w-2 h-2 rounded-full bg-sky-600"></span> Checked In
           </span>
-          <span className="inline-flex items-center gap-1 font-semibold text-slate-700 text-xs">
+          <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
             <span className="w-2 h-2 rounded-full bg-amber-500"></span> Pending
           </span>
-          <span className="inline-flex items-center gap-1 font-semibold text-slate-700 text-xs">
+          <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
             <span className="w-2 h-2 rounded-full bg-slate-400"></span> Checked Out
           </span>
         </div>
-        <div className="text-slate-400 text-[11px] font-medium hidden sm:block">
-          Click slot to book • Click bar to inspect
+        <div className="text-slate-400 text-[10px] sm:text-[11px] font-medium hidden md:block">
+          Tap slot to book • Tap bar to inspect
         </div>
       </div>
 
-      {/* Grid Container with Horizontal Scroll */}
-      <div className="overflow-x-auto relative custom-scrollbar">
-        <div className="min-w-[920px]">
+      {/* Grid Container with Responsive Sticky Column & Horizontal Scroll */}
+      <div className="overflow-x-auto relative custom-scrollbar touch-pan-x">
+        <div className="min-w-fit">
           {/* Header Row */}
           <div className="flex border-b border-slate-200 bg-slate-100 sticky top-0 z-20">
-            {/* Site Column Header */}
-            <div className="w-60 shrink-0 p-2.5 font-bold text-xs uppercase tracking-wider text-slate-600 border-r border-slate-200 sticky left-0 bg-slate-100 z-30">
-              Site / Hookups ({chartData.sites.length})
+            {/* Responsive Site Column Header */}
+            <div className="w-32 sm:w-44 md:w-56 shrink-0 p-2 sm:p-2.5 font-bold text-[11px] sm:text-xs uppercase tracking-wider text-slate-600 border-r border-slate-200 sticky left-0 bg-slate-100 z-30 flex items-center justify-between shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+              <span>Site ({chartData.sites.length})</span>
+              <span className="hidden sm:inline text-[10px] text-slate-400 font-normal">Rate</span>
             </div>
 
             {/* Date Headers */}
             <div
               className="flex-1 grid"
-              style={{ gridTemplateColumns: `repeat(${daysCount}, minmax(56px, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${daysCount}, minmax(46px, 1fr))` }}
             >
               {dateColumns.map((col) => (
                 <div
                   key={col.dateKey}
-                  className={`py-2 px-1 text-center border-r border-slate-200 transition-colors ${
+                  className={`py-1.5 sm:py-2 px-1 text-center border-r border-slate-200 transition-colors ${
                     col.isToday
                       ? "bg-emerald-50 font-black text-emerald-800"
                       : col.isWeekend
@@ -222,8 +228,8 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
                       : "text-slate-700"
                   }`}
                 >
-                  <div className="text-[10px] uppercase font-bold tracking-tight">{col.dayName}</div>
-                  <div className={`text-xs ${col.isToday ? "font-black text-emerald-700" : "font-semibold"}`}>
+                  <div className="text-[9px] sm:text-[10px] uppercase font-bold tracking-tight">{col.dayName}</div>
+                  <div className={`text-[11px] sm:text-xs ${col.isToday ? "font-black text-emerald-700" : "font-semibold"}`}>
                     {col.dayNum}
                   </div>
                 </div>
@@ -233,12 +239,12 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
 
           {/* Body Rows */}
           {loading && chartData.sites.length === 0 ? (
-            <div className="p-14 text-center text-slate-500 space-y-2">
+            <div className="p-10 sm:p-14 text-center text-slate-500 space-y-2">
               <RefreshCw className="w-5 h-5 animate-spin mx-auto text-emerald-600 mb-1" />
               <p className="text-xs font-semibold">Loading tape chart calendar...</p>
             </div>
           ) : chartData.sites.length === 0 ? (
-            <div className="p-14 text-center text-slate-500 space-y-3">
+            <div className="p-10 sm:p-14 text-center text-slate-500 space-y-3">
               <p className="text-xs font-medium">No sites created yet in your campground inventory.</p>
               <Link href="/sites" className="btn btn-primary btn-sm gap-1.5 font-bold rounded-md">
                 <PlusCircle className="w-4 h-4" />
@@ -256,17 +262,17 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
                   key={site._id}
                   className="flex border-b border-slate-100 hover:bg-slate-50/60 transition-colors group relative"
                 >
-                  {/* Sticky Site Info Cell */}
-                  <div className="w-60 shrink-0 p-2.5 border-r border-slate-200 sticky left-0 bg-white group-hover:bg-slate-50 z-10">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-slate-900 font-mono">
+                  {/* Sticky Site Info Cell - Responsive width with divider shadow */}
+                  <div className="w-32 sm:w-44 md:w-56 shrink-0 p-2 sm:p-2.5 border-r border-slate-200 sticky left-0 bg-white group-hover:bg-slate-50 z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-bold text-xs sm:text-sm text-slate-900 font-mono truncate">
                         Site {site.siteNumber}
                       </span>
-                      <span className="text-xs font-black text-emerald-700 font-mono">
-                        {formatCurrency(site.currentBaseRate)}/nt
+                      <span className="text-[10px] sm:text-xs font-black text-emerald-700 font-mono shrink-0">
+                        {formatCurrency(site.currentBaseRate)}
                       </span>
                     </div>
-                    <div className="mt-1">
+                    <div className="mt-0.5 sm:mt-1">
                       <HookupIcons
                         hookups={site.siteTypeSnapshot?.hookups}
                         rigType={site.rigType}
@@ -278,8 +284,8 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
 
                   {/* Date Grid Cell Layer */}
                   <div
-                    className="flex-1 grid relative min-h-[56px]"
-                    style={{ gridTemplateColumns: `repeat(${daysCount}, minmax(56px, 1fr))` }}
+                    className="flex-1 grid relative min-h-[50px] sm:min-h-[56px]"
+                    style={{ gridTemplateColumns: `repeat(${daysCount}, minmax(46px, 1fr))` }}
                   >
                     {/* Background Clickable Date Slots */}
                     {dateColumns.map((col) => (
@@ -291,7 +297,7 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
                         }`}
                         title={`Click to book Site ${site.siteNumber} on ${col.dateKey}`}
                       >
-                        <Plus className="w-3.5 h-3.5 text-emerald-700 opacity-0 group-hover/slot:opacity-100 transition-opacity" />
+                        <Plus className="w-3 h-3 text-emerald-700 opacity-0 group-hover/slot:opacity-100 transition-opacity" />
                       </div>
                     ))}
 
@@ -318,7 +324,7 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
                             e.stopPropagation();
                             onSelectReservation(res._id);
                           }}
-                          className={`absolute top-1.5 bottom-1.5 rounded border flex items-center px-2 cursor-pointer z-10 transition-transform overflow-hidden ${getStatusColor(
+                          className={`absolute top-1 bottom-1 rounded border flex items-center px-1.5 sm:px-2 cursor-pointer z-10 transition-transform overflow-hidden ${getStatusColor(
                             res.status
                           )}`}
                           style={{
@@ -327,10 +333,10 @@ export function TapeChart({ onSelectReservation, onBookSiteDate }: TapeChartProp
                           }}
                           title={`${res.guestSnapshot?.fullName || "Guest"} (${res.confirmationCode}) • ${res.numNights} nights • ${res.status}`}
                         >
-                          <div className="truncate text-xs font-bold leading-tight">
+                          <div className="truncate text-[10px] sm:text-xs font-bold leading-tight">
                             <span>{res.guestSnapshot?.fullName || "Guest"}</span>
                             {res.guestSnapshot?.rvLengthFt ? (
-                              <span className="opacity-80 ml-1 text-[10px] font-mono">
+                              <span className="opacity-80 ml-1 text-[9px] font-mono hidden sm:inline">
                                 ({res.guestSnapshot.rvLengthFt}ft)
                               </span>
                             ) : null}

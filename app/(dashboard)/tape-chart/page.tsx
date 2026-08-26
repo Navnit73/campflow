@@ -25,13 +25,13 @@ export default function TapeChartPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 max-w-full overflow-hidden">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
+        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
           Site Tape Chart
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-          Visual occupancy matrix • Click any available slot to book or click a reservation bar to inspect details
+          Visual occupancy matrix • Tap any available slot to book or tap a reservation bar to inspect details
         </p>
       </div>
 

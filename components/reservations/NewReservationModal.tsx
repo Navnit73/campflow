@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { RV_TYPES } from "@/lib/constants";
 import { calculatePricing } from "@/lib/utils/pricing";
 import { formatCurrency, formatRvType } from "@/lib/utils/format";
-import { Loader2, Calendar, User, CreditCard } from "lucide-react";
+import { Loader2, Calendar, User, CreditCard, MapPin, Truck } from "lucide-react";
 
 interface NewReservationModalProps {
   isOpen: boolean;
@@ -149,59 +149,62 @@ export function NewReservationModal({
       onClose={onClose}
       title="Create New Reservation"
       subtitle="Book a site and record camper details"
-      maxWidth="max-w-3xl"
+      maxWidth="max-w-2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Section 1: Dates & Site Selection */}
-        <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2.5">
-          <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
-            <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-            1. Site & Dates
+        {/* Section 1: Site & Dates */}
+        <div className="p-3 sm:p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+          <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700 pb-1 border-b border-slate-200/60">
+            <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            1. Site & Stay Dates
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="label text-xs font-bold text-slate-700 py-0.5">Site</label>
-              <select
-                value={siteId}
-                onChange={(e) => setSiteId(e.target.value)}
-                className="select select-bordered select-sm w-full font-medium bg-white rounded-md"
-                required
-              >
-                <option value="" disabled>Select Site</option>
-                {sites.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    Site {s.siteNumber} - {s.siteTypeSnapshot?.name} ({formatCurrency(s.currentBaseRate)}/nt)
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Site selection */}
+          <div className="w-full">
+            <label className="label text-xs font-bold text-slate-700 py-0.5">Campground Site</label>
+            <select
+              value={siteId}
+              onChange={(e) => setSiteId(e.target.value)}
+              className="select select-bordered select-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm"
+              required
+            >
+              <option value="" disabled>Select a site...</option>
+              {sites.map((s) => (
+                <option key={s._id} value={s._id}>
+                  Site {s.siteNumber} — {s.siteTypeSnapshot?.name || "Standard"} ({formatCurrency(s.currentBaseRate)}/nt)
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <div>
+          {/* Check-In / Check-Out Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="w-full">
               <label className="label text-xs font-bold text-slate-700 py-0.5">Check-In Date</label>
               <input
                 type="date"
                 value={checkInDate}
                 onChange={(e) => setCheckInDate(e.target.value)}
-                className="input input-bordered input-sm w-full font-medium bg-white rounded-md"
+                className="input input-bordered input-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm"
                 required
               />
             </div>
 
-            <div>
+            <div className="w-full">
               <label className="label text-xs font-bold text-slate-700 py-0.5">Check-Out Date</label>
               <input
                 type="date"
                 value={checkOutDate}
                 onChange={(e) => setCheckOutDate(e.target.value)}
-                className="input input-bordered input-sm w-full font-medium bg-white rounded-md"
+                className="input input-bordered input-sm w-full font-medium bg-white rounded-md text-xs sm:text-sm"
                 min={checkInDate}
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 pt-0.5">
+          {/* Occupancy counts */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-0.5">
             <div>
               <label className="label text-xs font-bold text-slate-700 py-0.5">Adults</label>
               <input
@@ -210,7 +213,7 @@ export function NewReservationModal({
                 max={12}
                 value={adults}
                 onChange={(e) => setAdults(Number(e.target.value))}
-                className="input input-bordered input-sm w-full bg-white rounded-md"
+                className="input input-bordered input-sm w-full bg-white rounded-md font-mono text-center sm:text-left"
               />
             </div>
             <div>
@@ -221,7 +224,7 @@ export function NewReservationModal({
                 max={10}
                 value={children}
                 onChange={(e) => setChildren(Number(e.target.value))}
-                className="input input-bordered input-sm w-full bg-white rounded-md"
+                className="input input-bordered input-sm w-full bg-white rounded-md font-mono text-center sm:text-left"
               />
             </div>
             <div>
@@ -232,21 +235,21 @@ export function NewReservationModal({
                 max={6}
                 value={pets}
                 onChange={(e) => setPets(Number(e.target.value))}
-                className="input input-bordered input-sm w-full bg-white rounded-md"
+                className="input input-bordered input-sm w-full bg-white rounded-md font-mono text-center sm:text-left"
               />
             </div>
           </div>
         </div>
 
         {/* Section 2: Guest Information */}
-        <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2.5">
-          <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
-            <User className="w-3.5 h-3.5 text-emerald-600" />
+        <div className="p-3 sm:p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+          <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700 pb-1 border-b border-slate-200/60">
+            <User className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             2. Guest Profile & Rig Specs
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+            <div className="w-full">
               <label className="label text-xs font-bold text-slate-700 py-0.5">First Name</label>
               <input
                 type="text"
@@ -257,7 +260,7 @@ export function NewReservationModal({
                 required
               />
             </div>
-            <div>
+            <div className="w-full">
               <label className="label text-xs font-bold text-slate-700 py-0.5">Last Name</label>
               <input
                 type="text"
@@ -268,7 +271,7 @@ export function NewReservationModal({
                 required
               />
             </div>
-            <div>
+            <div className="w-full">
               <label className="label text-xs font-bold text-slate-700 py-0.5">Email Address</label>
               <input
                 type="email"
@@ -279,7 +282,7 @@ export function NewReservationModal({
                 required
               />
             </div>
-            <div>
+            <div className="w-full">
               <label className="label text-xs font-bold text-slate-700 py-0.5">Phone Number</label>
               <input
                 type="tel"
@@ -292,13 +295,14 @@ export function NewReservationModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1.5 border-t border-slate-200">
-            <div>
+          {/* Rig info */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 border-t border-slate-200/60">
+            <div className="w-full">
               <label className="label text-xs font-bold text-slate-700 py-0.5">RV / Rig Type</label>
               <select
                 value={rvType}
                 onChange={(e) => setRvType(e.target.value)}
-                className="select select-bordered select-sm w-full bg-white rounded-md"
+                className="select select-bordered select-sm w-full bg-white rounded-md text-xs"
               >
                 {RV_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -307,8 +311,8 @@ export function NewReservationModal({
                 ))}
               </select>
             </div>
-            <div>
-              <label className="label text-xs font-bold text-slate-700 py-0.5">Rig Length (ft)</label>
+            <div className="w-full">
+              <label className="label text-xs font-bold text-slate-700 py-0.5">Length (ft)</label>
               <input
                 type="number"
                 min={0}
@@ -318,8 +322,8 @@ export function NewReservationModal({
                 className="input input-bordered input-sm w-full font-mono bg-white rounded-md"
               />
             </div>
-            <div>
-              <label className="label text-xs font-bold text-slate-700 py-0.5">License Plate (optional)</label>
+            <div className="w-full">
+              <label className="label text-xs font-bold text-slate-700 py-0.5">License Plate (opt)</label>
               <input
                 type="text"
                 placeholder="CO-123X"
@@ -332,22 +336,22 @@ export function NewReservationModal({
         </div>
 
         {/* Section 3: Billing & Optional Payment */}
-        <div className="p-3.5 rounded-lg border border-slate-200 bg-white space-y-2.5">
-          <div className="flex items-center justify-between">
+        <div className="p-3 sm:p-4 rounded-lg border border-slate-200 bg-white space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-700">
-              <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+              <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
               3. Rate & Payment
             </div>
             <div className="text-right">
               <span className="text-xs text-slate-500">{pricing.numNights} Nights • Total: </span>
-              <span className="text-base font-black text-emerald-600 font-mono">
+              <span className="text-base font-black text-emerald-700 font-mono">
                 {formatCurrency(pricing.totalAmount)}
               </span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+            <div className="w-full">
               <label className="label text-xs font-bold text-slate-700 py-0.5">Discount Code (optional)</label>
               <input
                 type="text"
@@ -374,8 +378,8 @@ export function NewReservationModal({
           </div>
 
           {collectPaymentNow && (
-            <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200 flex flex-wrap items-center gap-3.5">
-              <span className="text-xs font-bold text-slate-700">Payment Method:</span>
+            <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200 flex flex-wrap items-center gap-3">
+              <span className="text-xs font-bold text-slate-700">Method:</span>
               <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
                 <input
                   type="radio"
@@ -414,11 +418,19 @@ export function NewReservationModal({
         </div>
 
         {/* Footer CTAs */}
-        <div className="flex items-center justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm font-semibold rounded-md">
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-ghost btn-sm w-full sm:w-auto font-semibold rounded-md"
+          >
             Cancel
           </button>
-          <button type="submit" disabled={loading} className="btn btn-primary btn-sm min-w-[140px] font-bold rounded-md">
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn btn-primary btn-sm w-full sm:w-auto min-w-[140px] font-bold rounded-md"
+          >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Booking"}
           </button>
         </div>
