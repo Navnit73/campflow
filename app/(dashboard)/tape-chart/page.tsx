@@ -31,7 +31,7 @@ export default function TapeChartPage() {
           Site Tape Chart
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-          Visual occupancy matrix • Tap any available slot to book or tap a reservation bar to inspect details
+          Interactive occupancy matrix • Drag bookings to reschedule or reassign sites • Drag bar edges to resize stay dates
         </p>
       </div>
 

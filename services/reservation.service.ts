@@ -373,6 +373,19 @@ export class ReservationService {
       input.checkInDate ||
       input.checkOutDate
     ) {
+      const site = await Site.findById(newSiteId).lean();
+      if (!site) {
+        const err = new Error("Selected site was not found.");
+        err.name = "NotFoundError";
+        throw err;
+      }
+
+      if (site.status === "maintenance" || site.status === "inactive") {
+        const err = new Error(`Site ${site.siteNumber} is currently under ${site.status} and unavailable.`);
+        err.name = "ConflictError";
+        throw err;
+      }
+
       const isAvail = await this.checkSiteAvailability(
         propertyId,
         newSiteId,
@@ -389,17 +402,14 @@ export class ReservationService {
 
       // If site changed, update site snapshot
       if (input.siteId && input.siteId !== reservation.siteId.toString()) {
-        const site = await Site.findById(newSiteId).lean();
-        if (site) {
-          reservation.siteId = site._id;
-          reservation.siteSnapshot = {
-            siteNumber: site.siteNumber,
-            siteTypeName: site.siteTypeSnapshot.name,
-            hookups: site.siteTypeSnapshot.hookups,
-            rigType: site.rigType,
-            baseRate: site.currentBaseRate,
-          };
-        }
+        reservation.siteId = site._id;
+        reservation.siteSnapshot = {
+          siteNumber: site.siteNumber,
+          siteTypeName: site.siteTypeSnapshot.name,
+          hookups: site.siteTypeSnapshot.hookups,
+          rigType: site.rigType,
+          baseRate: site.currentBaseRate,
+        };
       }
 
       reservation.checkInDate = newCheckIn;
