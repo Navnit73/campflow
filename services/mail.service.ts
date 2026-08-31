@@ -4,6 +4,7 @@ import {
   welcomeRegistrationTemplate,
   bookingConfirmationTemplate,
   massAnnouncementTemplate,
+  scheduledExportReportTemplate,
 } from "@/lib/mail/templates";
 
 export class MailService {
@@ -174,4 +175,75 @@ export class MailService {
       failedCount,
     };
   }
+
+  /**
+   * 5. Send Scheduled Export Report with Excel Attachment
+   */
+  static async sendScheduledExportReport(params: {
+    recipients: string[];
+    propertyName: string;
+    scheduleName: string;
+    reportTypeName: string;
+    frequency: string;
+    dateRangeText: string;
+    recordsCount: number;
+    fileSizeBytes: number;
+    fileName: string;
+    fileBuffer: Buffer;
+    summaryMetrics?: {
+      totalRevenue?: number;
+      totalTransactions?: number;
+      totalBookings?: number;
+    };
+  }) {
+    if (!params.recipients || params.recipients.length === 0) {
+      return { success: true, sentCount: 0, failedCount: 0 };
+    }
+
+    const html = scheduledExportReportTemplate({
+      propertyName: params.propertyName,
+      scheduleName: params.scheduleName,
+      reportTypeName: params.reportTypeName,
+      frequency: params.frequency,
+      dateRangeText: params.dateRangeText,
+      recordsCount: params.recordsCount,
+      fileSizeBytes: params.fileSizeBytes,
+      fileName: params.fileName,
+      summaryMetrics: params.summaryMetrics,
+    });
+
+    const attachments = [
+      {
+        filename: params.fileName,
+        content: params.fileBuffer,
+        contentType:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    ];
+
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const email of params.recipients) {
+      const result = await sendEmail({
+        to: email,
+        subject: `📊 [Scheduled Report] ${params.scheduleName} - ${params.propertyName}`,
+        html,
+        attachments,
+      });
+
+      if (result.success) {
+        sentCount++;
+      } else {
+        failedCount++;
+      }
+    }
+
+    return {
+      success: sentCount > 0 || failedCount === 0,
+      sentCount,
+      failedCount,
+    };
+  }
 }
+

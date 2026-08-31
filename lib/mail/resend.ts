@@ -11,12 +11,19 @@ export const DEFAULT_FROM_EMAIL =
 export const FALLBACK_TEST_EMAIL =
   process.env.RESEND_TEST_EMAIL || "navnitrai7355@gmail.com";
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+}
+
 export interface SendEmailOptions {
   to: string | string[];
   subject: string;
   html: string;
   from?: string;
   replyTo?: string;
+  attachments?: EmailAttachment[];
 }
 
 export async function sendEmail({
@@ -25,6 +32,7 @@ export async function sendEmail({
   html,
   from = DEFAULT_FROM_EMAIL,
   replyTo,
+  attachments,
 }: SendEmailOptions): Promise<{ success: boolean; id?: string; error?: string; routedTo?: string }> {
   try {
     const recipients = Array.isArray(to) ? to : [to];
@@ -34,13 +42,13 @@ export async function sendEmail({
       console.log(
         `\n[Resend Mailer Simulated] 📧 To: ${recipients.join(
           ", "
-        )} | Subject: "${subject}"`
+        )} | Subject: "${subject}" | Attachments: ${attachments?.length || 0}`
       );
       console.log(`[Resend Mailer] (Set RESEND_API_KEY in .env to deliver live emails)\n`);
       return { success: true, id: `sim_${Math.random().toString(36).substring(2, 11)}` };
     }
 
-    console.log(`[Resend Mailer] 🚀 Dispatching to [${recipients.join(", ")}] with from "${from}"...`);
+    console.log(`[Resend Mailer] 🚀 Dispatching to [${recipients.join(", ")}] with from "${from}" (Attachments: ${attachments?.length || 0})...`);
 
     // 1. First attempt direct send
     const { data, error } = await resend.emails.send({
@@ -49,6 +57,7 @@ export async function sendEmail({
       subject,
       html,
       replyTo,
+      attachments,
     });
 
     if (error) {
@@ -83,6 +92,7 @@ export async function sendEmail({
           subject: `[Sandbox -> ${recipients[0]}] ${subject}`,
           html: sandboxNotice + html,
           replyTo,
+          attachments,
         });
 
         if (fallbackResult.error) {

@@ -389,3 +389,93 @@ export function massAnnouncementTemplate(data: {
     </html>
   `;
 }
+
+/**
+ * 5. Automated Scheduled Export Report Template
+ */
+export function scheduledExportReportTemplate(data: {
+  propertyName: string;
+  scheduleName: string;
+  reportTypeName: string;
+  frequency: string;
+  dateRangeText: string;
+  recordsCount: number;
+  fileSizeBytes: number;
+  fileName: string;
+  summaryMetrics?: {
+    totalRevenue?: number;
+    totalTransactions?: number;
+    totalBookings?: number;
+  };
+}) {
+  const sizeKb = (data.fileSizeBytes / 1024).toFixed(1);
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <body style="${BASE_STYLES}">
+        <div style="${CONTAINER_STYLES}">
+          <div style="${HEADER_STYLES}">
+            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:0.9;">CampFlow Automated Accounting</div>
+            <h1 style="margin:4px 0 0 0;font-size:22px;font-weight:800;">${data.propertyName}</h1>
+          </div>
+
+          <div style="padding: 28px 30px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <span style="display:inline-block;background-color:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;text-transform:uppercase;">
+                ${data.frequency} Automated Schedule
+              </span>
+            </div>
+
+            <h2 style="font-size:19px;margin-top:0;margin-bottom:8px;color:#0f172a;">${data.scheduleName}</h2>
+            <p style="font-size:13px;color:#64748b;margin-top:0;margin-bottom:20px;">
+              Attached is your scheduled <strong>${data.reportTypeName}</strong> for the period <strong>${data.dateRangeText}</strong>.
+            </p>
+
+            <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+              <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:10px;">Export Summary</div>
+              
+              <table style="width:100%;font-size:13px;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:4px 0;color:#64748b;">Report Format:</td>
+                  <td style="padding:4px 0;text-align:right;font-weight:700;color:#0f172a;">Microsoft Excel (.xlsx)</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;color:#64748b;">Total Records:</td>
+                  <td style="padding:4px 0;text-align:right;font-weight:700;color:#0f172a;">${data.recordsCount} rows</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;color:#64748b;">File Size:</td>
+                  <td style="padding:4px 0;text-align:right;font-mono;font-weight:600;color:#0f172a;">${sizeKb} KB</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;color:#64748b;">File Name:</td>
+                  <td style="padding:4px 0;text-align:right;font-family:monospace;font-size:11px;color:#047857;font-weight:700;">${data.fileName}</td>
+                </tr>
+                ${
+                  data.summaryMetrics?.totalRevenue !== undefined
+                    ? `
+                <tr style="border-top:1px dashed #cbd5e1;">
+                  <td style="padding:8px 0 4px 0;color:#0f172a;font-weight:700;">Total Revenue:</td>
+                  <td style="padding:8px 0 4px 0;text-align:right;font-weight:800;font-size:15px;color:#047857;">${formatCurrency(data.summaryMetrics.totalRevenue)}</td>
+                </tr>
+                `
+                    : ""
+                }
+              </table>
+            </div>
+
+            <p style="font-size:12px;color:#94a3b8;line-height:1.5;">
+              📎 The Excel workbook is attached to this email. You can open it in Microsoft Excel, Google Sheets, or Apple Numbers. You can also review past exports anytime in your CampFlow Dashboard under <strong>Exports & Reports</strong>.
+            </p>
+          </div>
+
+          <div style="${FOOTER_STYLES}">
+            <p style="margin:0;">CampFlow Campground Management Systems • ${data.propertyName}</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+

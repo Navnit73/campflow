@@ -17,19 +17,52 @@ import {
   Hash,
   Search,
   RotateCcw,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export default function PaymentsPage() {
-  const { error } = useToast();
+  const { error, success, info } = useToast();
   const [payments, setPayments] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   // Filters
   const [methodFilter, setMethodFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    info("Generating formatted Excel ledger...");
+    try {
+      const res = await apiClient.post("/api/exports/on-demand", {
+        type: "excel_transactions",
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        paymentMethod: methodFilter !== "all" ? methodFilter : undefined,
+      });
+
+      if (res.data?.success) {
+        const downloadUrl = res.data.data.downloadUrl;
+        const fileName = res.data.data.fileName;
+
+        const downloadLink = document.createElement("a");
+        downloadLink.href = downloadUrl;
+        downloadLink.download = fileName;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+
+        success(`✓ "${fileName}" downloaded successfully!`);
+      }
+    } catch (err: any) {
+      error(err?.response?.data?.message || err?.message || "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchPayments = async (page = 1) => {
     setLoading(true);
@@ -98,6 +131,20 @@ export default function PaymentsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportExcel}
+            disabled={exporting}
+            className="btn btn-outline btn-sm font-bold text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50 rounded-md"
+            title="Export Ledger to Excel"
+          >
+            {exporting ? (
+              <span className="loading loading-spinner loading-xs text-emerald-600" />
+            ) : (
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            )}
+            <span>Export to Excel</span>
+          </button>
+
           <button
             onClick={() => fetchPayments(pagination.page)}
             className="btn btn-ghost btn-sm btn-circle text-slate-600 hover:text-slate-900 rounded-md"

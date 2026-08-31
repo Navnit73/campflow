@@ -14,13 +14,44 @@ import {
   PieChart,
   Inbox,
   CreditCard,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export default function ReportsPage() {
-  const { error } = useToast();
+  const { error, success, info } = useToast();
   const [days, setDays] = useState<number>(30);
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    info("Generating master financial accounting report...");
+    try {
+      const res = await apiClient.post("/api/exports/on-demand", {
+        type: "excel_master_accounting",
+        preset: days === 7 ? "7d" : days === 90 ? "qtd" : "30d",
+      });
+
+      if (res.data?.success) {
+        const downloadUrl = res.data.data.downloadUrl;
+        const fileName = res.data.data.fileName;
+
+        const downloadLink = document.createElement("a");
+        downloadLink.href = downloadUrl;
+        downloadLink.download = fileName;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+
+        success(`✓ "${fileName}" downloaded successfully!`);
+      }
+    } catch (err: any) {
+      error(err?.response?.data?.message || err?.message || "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchReports = async (periodDays = days) => {
     setLoading(true);
@@ -64,6 +95,20 @@ export default function ReportsPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={handleExportExcel}
+            disabled={exporting}
+            className="btn btn-outline btn-sm font-bold text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50 rounded-md"
+            title="Export Master Financial Workbook"
+          >
+            {exporting ? (
+              <span className="loading loading-spinner loading-xs text-emerald-600" />
+            ) : (
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            )}
+            <span>Export to Excel</span>
+          </button>
+
           <div className="join">
             <button
               onClick={() => setDays(7)}

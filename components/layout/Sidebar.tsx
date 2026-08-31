@@ -16,6 +16,7 @@ import {
   Settings,
   Trees,
   X,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { name: "Guests (CRM)", href: "/guests", icon: Users },
   { name: "Payments", href: "/payments", icon: CreditCard },
   { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Exports & Reports", href: "/exports", icon: FileSpreadsheet },
   { name: "Park Settings", href: "/settings", icon: Settings },
 ];
 
