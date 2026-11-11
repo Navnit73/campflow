@@ -15,7 +15,7 @@ export const ROLES = {
 
 // Short-lived per-instance cache of user status so revocation/role changes apply within
 // USER_CACHE_TTL_MS without a DB round-trip on every request.
-const USER_CACHE_TTL_MS = 30_000;
+const USER_CACHE_TTL_MS = Number(process.env.SESSION_CACHE_TTL_MS) || 30_000;
 const userCache = new Map<string, { isActive: boolean; role: UserRole; organizationId: string; expires: number }>();
 
 async function loadUserState(userId: string) {

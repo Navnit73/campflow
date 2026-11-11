@@ -15,7 +15,7 @@ import * as loginRoute from "@/app/api/auth/login/route";
 import * as confirmationRoute from "@/app/api/public/book/confirmation/[code]/route";
 
 setupTestDatabase();
-beforeEach(() => __resetRateLimits());
+beforeEach(async () => { await __resetRateLimits(); });
 
 async function userToken(t: any, role: "owner" | "manager" | "staff", isActive = true) {
   const u = await User.create({ organizationId: t.org._id, name: role, email: `${role}-${Date.now()}-${Math.random()}@x.com`, passwordHash: "x", role, isActive });

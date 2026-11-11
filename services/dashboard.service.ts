@@ -5,6 +5,12 @@ import { Payment } from "@/models/Payment";
 import { Guest } from "@/models/Guest";
 import { Property } from "@/models/Property";
 import { connectDB } from "@/lib/db/connection";
+import { cached, propertyScope } from "@/lib/cache";
+
+/** Dashboard aggregates are cached briefly per property and invalidated on every write to its data. */
+export const DASHBOARD_CACHE_TTL_MS = 60_000;
+/** Max on-site reservations returned in the list (the count is always exact). */
+export const ONSITE_LIST_LIMIT = 50;
 import { addDays, addDaysStr, parseDateOnly, zonedDateKey, zonedMidnight } from "@/lib/utils/date";
 
 const LIST_FIELDS =
@@ -13,6 +19,12 @@ const LIST_FIELDS =
 export class DashboardService {
   static async getDashboardSummary(organizationId: string, propertyId: string) {
     await connectDB();
+    return cached("dashboard", propertyScope(propertyId), organizationId, DASHBOARD_CACHE_TTL_MS, () =>
+      this.computeDashboardSummary(organizationId, propertyId)
+    );
+  }
+
+  static async computeDashboardSummary(organizationId: string, propertyId: string) {
 
     const propId = new mongoose.Types.ObjectId(propertyId);
     const property = await Property.findOne({ _id: propId, organizationId: new mongoose.Types.ObjectId(organizationId) })
@@ -32,6 +44,7 @@ export class DashboardService {
       totalSites,
       maintenanceSites,
       currentlyOnsiteReservations,
+      currentlyOnsiteCount,
       todayArrivals,
       todayDepartures,
       upcomingReservations,
@@ -43,7 +56,13 @@ export class DashboardService {
     ] = await Promise.all([
       Site.countDocuments({ propertyId: propId, status: { $ne: "inactive" } }),
       Site.countDocuments({ propertyId: propId, status: "maintenance" }),
-      Reservation.find({ propertyId: propId, status: "checked_in" }).select(LIST_FIELDS).sort({ checkOutDate: 1 }).lean(),
+      // Soonest departures first, bounded (an unbounded list was ~1.7MB per response at 2k stays).
+      Reservation.find({ propertyId: propId, status: "checked_in" })
+        .select(LIST_FIELDS)
+        .sort({ checkOutDate: 1 })
+        .limit(ONSITE_LIST_LIMIT)
+        .lean(),
+      Reservation.countDocuments({ propertyId: propId, status: "checked_in" }),
       Reservation.find({
         propertyId: propId,
         status: { $in: ["confirmed", "pending"] },
@@ -89,7 +108,6 @@ export class DashboardService {
     ]);
 
     const activeSites = Math.max(1, totalSites);
-    const currentlyOnsiteCount = currentlyOnsiteReservations.length;
     const occupancyRate = Number(((currentlyOnsiteCount / activeSites) * 100).toFixed(1));
     const availableToday = Math.max(0, totalSites - maintenanceSites - currentlyOnsiteCount);
 

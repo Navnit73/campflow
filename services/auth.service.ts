@@ -8,6 +8,7 @@ import { signAuthToken } from "@/lib/auth/jwt";
 import { LoginInput, RegisterInput } from "@/lib/validations/auth.schema";
 import { connectDB } from "@/lib/db/connection";
 import { MailService } from "@/services/mail.service";
+import { deviceFingerprint, LoginContext, MAX_KNOWN_DEVICES } from "@/lib/auth/device";
 
 function slugify(text: string): string {
   return text
@@ -23,7 +24,7 @@ function slugify(text: string): string {
 const DUMMY_PASSWORD_HASH = "$2b$10$CwTycUXWue0Thq9StjUM0uJ8.Pp0xQ4Y0b3E0Gg1YJ8Wf5i3vX9pW";
 
 export class AuthService {
-  static async register(input: RegisterInput) {
+  static async register(input: RegisterInput, ctx: LoginContext = {}) {
     await connectDB();
 
     const existingUser = await User.findOne({ email: input.email.toLowerCase() }).lean();
@@ -134,6 +135,7 @@ export class AuthService {
         role: "owner",
         phone: input.phone,
         isActive: true,
+        knownDevices: [deviceFingerprint(ctx)], // signup device is trusted
       });
 
       // Update organization owner ref
@@ -191,10 +193,10 @@ export class AuthService {
     }
   }
 
-  static async login(input: LoginInput) {
+  static async login(input: LoginInput, ctx: LoginContext = {}) {
     await connectDB();
 
-    const user = await User.findOne({ email: input.email.toLowerCase().trim() });
+    const user = await User.findOne({ email: input.email.toLowerCase().trim() }).select("+knownDevices");
 
     // Always run one bcrypt comparison so response time doesn't reveal whether the email exists.
     const isValid = await verifyPassword(input.password, user?.passwordHash || DUMMY_PASSWORD_HASH);
@@ -224,12 +226,21 @@ export class AuthService {
       name: user.name,
     });
 
-    // Send Login Security Alert asynchronously
-    MailService.sendLoginAlert({
-      to: user.email,
-      userName: user.name,
-      loginTime: new Date().toLocaleString("en-US", { timeZone: property.timezone || "America/Denver" }),
-    }).catch((err) => console.error("[Mail Error] Failed to send login alert:", err));
+    // Security alert only for a device/network not seen recently (previously sent on every login).
+    const fingerprint = deviceFingerprint(ctx);
+    const known = user.knownDevices || [];
+    const isNewDevice = !known.includes(fingerprint);
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { knownDevices: [...known.filter((f) => f !== fingerprint), fingerprint].slice(-MAX_KNOWN_DEVICES) } }
+    );
+    if (isNewDevice) {
+      MailService.sendLoginAlert({
+        to: user.email,
+        userName: user.name,
+        loginTime: new Date().toLocaleString("en-US", { timeZone: property.timezone || "America/Denver" }),
+      }).catch((err) => console.error("[Mail Error] Failed to send login alert:", err));
+    }
 
     return {
       user: {

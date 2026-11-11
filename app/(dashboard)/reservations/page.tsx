@@ -340,7 +340,7 @@ export default function ReservationsPage() {
           <div className="p-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50">
             <div>
               Showing <span className="font-bold">{reservations.length}</span> of{" "}
-              <span className="font-bold">{pagination.total}</span> reservations
+              <span className="font-bold">{pagination.total}{(pagination as { totalCapped?: boolean }).totalCapped ? "+" : ""}</span> reservations
             </div>
             <div className="join">
               <button

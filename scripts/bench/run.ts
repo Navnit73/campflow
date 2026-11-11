@@ -115,14 +115,34 @@ async function main() {
   results.push(await measure("reservations.list (page 1)", () => ReservationService.listReservations(orgId, propertyId, q({}))));
   results.push(await measure("reservations.list (page 200)", () => ReservationService.listReservations(orgId, propertyId, q({ page: 200 }))));
   results.push(await measure("reservations.list (search 'smith')", () => ReservationService.listReservations(orgId, propertyId, q({ search: "smith" }))));
+  results.push(await measure("reservations.list (search, no match — worst case)", () => ReservationService.listReservations(orgId, propertyId, q({ search: "zzqxj" }))));
+  // Seeded codes contain 0/1 (never generated in production), so book one real reservation for this probe.
+  const realCode = (
+    await ReservationService.createReservation(orgId, propertyId, {
+      siteId: tenant.siteIds[1], guest: { firstName: "Code", lastName: "Probe", email: "code.probe@x.com", phone: "5550001111", rvType: "travel_trailer", rvLengthFt: 25, licensePlate: "" },
+      checkInDate: addDaysStr(today, 3000), checkOutDate: addDaysStr(today, 3002), adults: 2, children: 0, pets: 0, addOns: [], status: "confirmed", source: "admin", specialRequests: "", notes: "",
+    } as never)
+  ).confirmationCode;
+  results.push(await measure("reservations.list (search by code prefix)", () => ReservationService.listReservations(orgId, propertyId, q({ search: realCode.slice(0, 7) }))));
   results.push(await measure("reservations.list (status+30d range)", () => ReservationService.listReservations(orgId, propertyId, q({ status: "confirmed", startDate: today, endDate: addDaysStr(today, 30) }))));
   results.push(await measure("reservations.get (detail)", () => ReservationService.getReservationById(orgId, propertyId, tenant.sampleReservationId)));
   results.push(await measure("tape-chart (14 days)", () => ReservationService.getTapeChartData(orgId, propertyId, today, 14)));
   results.push(await measure("tape-chart (60 days)", () => ReservationService.getTapeChartData(orgId, propertyId, today, 60)));
   results.push(await measure("availability (all sites, 3 nights)", () => ReservationService.checkAllSitesAvailability(orgId, propertyId, addDaysStr(today, 10), addDaysStr(today, 13))));
-  results.push(await measure("dashboard summary", () => DashboardService.getDashboardSummary(orgId, propertyId)));
-  results.push(await measure("reports (30 days)", () => ReportService.getFinancialReports(orgId, propertyId, 30)));
-  results.push(await measure("reports (365 days)", () => ReportService.getFinancialReports(orgId, propertyId, 365), 10));
+  // "dashboard summary" / "reports" = uncached computation (comparable with earlier runs).
+  results.push(await measure("dashboard summary", () => DashboardService.computeDashboardSummary(orgId, propertyId)));
+  results.push(await measure("reports (30 days)", () => ReportService.computeFinancialReports(orgId, propertyId, 30)));
+  results.push(await measure("reports (365 days)", () => ReportService.computeFinancialReports(orgId, propertyId, 365), 10));
+  // Phase 4: same calls through the cache (repeat reads → hits).
+  results.push(await measure("dashboard summary (cached)", () => DashboardService.getDashboardSummary(orgId, propertyId)));
+  results.push(await measure("reports 365d (cached)", () => ReportService.getFinancialReports(orgId, propertyId, 365)));
+  // Worst case: a write before every read invalidates, so each read recomputes.
+  results.push(
+    await measure("dashboard after a write (invalidated)", async () => {
+      await PaymentService.recordPayment(orgId, propertyId, { reservationId: tenant.sampleReservationId, amount: 1, type: "payment", method: "cash", status: "completed", transactionReference: "", notes: "" } as never);
+      return DashboardService.getDashboardSummary(orgId, propertyId);
+    })
+  );
   results.push(await measure("guests.list (page 1)", () => GuestService.listGuests(orgId, propertyId, q({}))));
   results.push(await measure("guests.list (search 'garcia')", () => GuestService.listGuests(orgId, propertyId, q({ search: "garcia" }))));
   results.push(await measure("guests.get (300-stay history)", () => GuestService.getGuestById(orgId, propertyId, tenant.sampleGuestId)));

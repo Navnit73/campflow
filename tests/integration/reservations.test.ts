@@ -173,3 +173,68 @@ describe("standalone compensation (audit H5, no replica set)", () => {
     expect(await mongoose.model("Payment").countDocuments()).toBe(0);
   });
 });
+
+describe("search pagination (capped count, code fast path)", () => {
+  it("confirmation-code search uses an anchored prefix and returns the booking", async () => {
+    const t = await seedTenant();
+    const r = await book(t);
+    const prefix = r.confirmationCode.slice(0, 6).toLowerCase().replace("-", ""); // e.g. "rv7mnd"
+    const res = await ReservationService.listReservations(t.orgId, t.propertyId, { search: prefix, page: 1, limit: 20 } as any);
+    expect(res.reservations.map((x: any) => x.confirmationCode)).toEqual([r.confirmationCode]);
+    expect(res.pagination).toMatchObject({ total: 1, totalCapped: false });
+  });
+
+  it("caps the total for broad searches and flags it", async () => {
+    const t = await seedTenant();
+    const { SEARCH_COUNT_CAP } = await import("@/lib/utils/pagination");
+    const docs = Array.from({ length: SEARCH_COUNT_CAP + 5 }, (_, i) => ({
+      organizationId: t.org._id, propertyId: t.property._id, siteId: t.site._id, guestId: t.site._id,
+      confirmationCode: `RV-BULK${i}`, guestSnapshot: { fullName: "Pat Smith", email: `p${i}@x.com`, phone: "1" },
+      siteSnapshot: { siteNumber: "A1" }, checkInDate: new Date("2020-01-01"), checkOutDate: new Date("2020-01-02"), status: "checked_out",
+    }));
+    await Reservation.collection.insertMany(docs);
+    const res = await ReservationService.listReservations(t.orgId, t.propertyId, { search: "smith", page: 1, limit: 20 } as any);
+    expect(res.pagination).toMatchObject({ total: SEARCH_COUNT_CAP, totalCapped: true, totalPages: SEARCH_COUNT_CAP / 20 });
+    expect(res.reservations).toHaveLength(20);
+    const all = await ReservationService.listReservations(t.orgId, t.propertyId, { page: 1, limit: 20 } as any);
+    expect(all.pagination).toMatchObject({ total: SEARCH_COUNT_CAP + 5, totalCapped: false }); // non-search counts stay exact
+  });
+});
+
+describe("staff add-on pricing (catalog-backed)", () => {
+  it("prices catalog items from the catalog, keeps manual charges, and never re-prices booked items", async () => {
+    const t = await seedTenant({ taxRatePercent: 0 });
+    const { AddOn } = await import("@/models/AddOn");
+    const cart = t.addOn._id.toString(); // Golf Cart, $45/night
+    const r = await book(t, {
+      checkInDate: "2030-06-01",
+      checkOutDate: "2030-06-03",
+      addOns: [
+        { addOnId: cart, name: "Golf Cart", price: 0, pricingType: "per_stay", quantity: 1, taxable: false }, // tampered
+        { name: "Broken window fee", price: 120, pricingType: "per_stay", quantity: 1, taxable: false }, // manual charge
+      ],
+    });
+    expect(r.addOns!.find((a: any) => a.name === "Golf Cart")).toMatchObject({ price: 45, pricingType: "per_night", subtotal: 90 });
+    expect(r.addOns!.find((a: any) => a.name === "Broken window fee")).toMatchObject({ price: 120, subtotal: 120 });
+
+    // Catalog price rises after booking; editing the folio keeps the booked price.
+    await AddOn.updateOne({ _id: t.addOn._id }, { $set: { price: 60 } });
+    const firewood = await AddOn.create({ organizationId: t.org._id, propertyId: t.property._id, name: "Firewood", pricingType: "per_unit", price: 8.5 });
+    const updated = await ReservationService.updateReservation(t.orgId, t.propertyId, r._id.toString(), {
+      addOns: [
+        { addOnId: cart, name: "Golf Cart", price: 1, pricingType: "per_night", quantity: 1, taxable: true },
+        { addOnId: firewood._id.toString(), name: "Firewood", price: 0, pricingType: "per_unit", quantity: 2, taxable: true },
+      ],
+    } as any);
+    expect(updated.addOns!.find((a: any) => a.name === "Golf Cart")).toMatchObject({ price: 45 });
+    expect(updated.addOns!.find((a: any) => a.name === "Firewood")).toMatchObject({ price: 8.5, subtotal: 17 });
+  });
+
+  it("rejects add-ons from another property", async () => {
+    const a = await seedTenant();
+    const b = await seedTenant();
+    await expect(
+      book(a, { addOns: [{ addOnId: b.addOn._id.toString(), name: "x", price: 0, pricingType: "per_stay", quantity: 1 }] })
+    ).rejects.toMatchObject({ name: "ValidationError" });
+  });
+});

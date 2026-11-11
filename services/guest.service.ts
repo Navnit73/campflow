@@ -3,8 +3,10 @@ import { Guest, IGuest } from "@/models/Guest";
 import { Reservation } from "@/models/Reservation";
 import { CreateGuestInput, UpdateGuestInput, QueryGuestsInput } from "@/lib/validations/guest.schema";
 import { connectDB } from "@/lib/db/connection";
+import { invalidateProperty } from "@/lib/cache";
 import { toDotPaths } from "@/lib/utils/flatten";
 import { searchRegex } from "@/lib/utils/regex";
+import { paginate, SEARCH_MAX_TIME_MS } from "@/lib/utils/pagination";
 import { ConflictError } from "@/lib/utils/errors";
 
 export class GuestService {
@@ -31,24 +33,18 @@ export class GuestService {
       ];
     }
 
-    const [guests, total] = await Promise.all([
+    const isSearch = Boolean(options.search && options.search.trim());
+    const [guests, pagination] = await Promise.all([
       Guest.find(query)
         .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(limit)
+        .maxTimeMS(isSearch ? SEARCH_MAX_TIME_MS : 0)
         .lean(),
-      Guest.countDocuments(query),
+      paginate(Guest, query, page, limit, isSearch),
     ]);
 
-    return {
-      guests,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    return { guests, pagination };
   }
 
   static async getGuestById(organizationId: string, propertyId: string, guestId: string) {
@@ -109,6 +105,7 @@ export class GuestService {
       isVip: input.isVip || false,
     });
 
+    await invalidateProperty(propertyId);
     return guest.toObject();
   }
 
@@ -141,6 +138,7 @@ export class GuestService {
       throw err;
     }
 
+    await invalidateProperty(propertyId);
     return guest;
   }
 }

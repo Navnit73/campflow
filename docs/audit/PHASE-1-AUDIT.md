@@ -315,3 +315,34 @@ Each fixed bug gets a regression test.
 - **Staff-entered add-on prices** are still trusted by design.
 - **Login alert email** is still sent on every login.
 - **Stuck broadcasts:** a broadcast stuck in `sending` after a crash isn't resumed automatically. Its stats show how far it got; resending is manual.
+
+---
+
+# Round 3 (2026-11-11): Phase 4 caching, Phase 7 E2E/load, remaining items
+
+Details are in `PHASE-4-7-CACHING-TESTING.md`.
+
+**Summary:**
+
+- **Cache:** generation-invalidated, coherent across instances, with single-flight loading. Applied to the dashboard, reports and the public catalog, never to availability.
+- **Search:** capped search count, plus an indexed fast path for confirmation codes.
+- **Rate limits:** shared across instances via MongoDB.
+- **Add-ons:** staff catalog add-ons are priced from the catalog.
+- **Login alerts:** only for new devices.
+- **Broadcasts:** stuck broadcasts are recovered by the cron job.
+- **Dashboard payload:** bounded (1.78 MB → 75 KB; 17× throughput under load).
+- **Tape chart:** projection trimmed (−14%).
+- **New tests:** an HTTP E2E suite (12 workflows against the production build) and a load/soak harness.
+
+**Results:**
+
+- **Tests:** 119 unit/integration + 12 E2E, all passing.
+- **Checks:** `tsc` clean, `next build` passes, eslint errors 203 (none added).
+
+**New environment variables (all optional):**
+
+- `SESSION_CACHE_TTL_MS` (default 30000)
+- `DISABLE_CACHE`
+- `EXPORT_RETENTION_DAYS`
+
+**New npm scripts:** `test:e2e`, `bench`, `load`.

@@ -10,6 +10,8 @@ export interface IUser extends Document {
   role: UserRole;
   phone?: string;
   isActive: boolean;
+  /** SHA-256 fingerprints of recent login devices (no raw IPs stored); used to alert only on new devices. */
+  knownDevices?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +52,11 @@ const UserSchema = new Schema<IUser>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    knownDevices: {
+      type: [String],
+      default: [],
+      select: false,
     },
   },
   {

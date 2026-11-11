@@ -1,0 +1,93 @@
+{
+  "durationSec": 10,
+  "connections": 50,
+  "connsBefore": 35,
+  "results": [
+    {
+      "name": "GET /api/dashboard (cached)",
+      "reqPerSec": 2149,
+      "latencyP50": 21,
+      "latencyP97_5": 42,
+      "latencyP99": 49,
+      "total": 21484,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 572,
+      "avgCpuPct": 112,
+      "mongoConnections": 41
+    },
+    {
+      "name": "GET /api/reservations (page 1)",
+      "reqPerSec": 612,
+      "latencyP50": 80,
+      "latencyP97_5": 96,
+      "latencyP99": 102,
+      "total": 6118,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 608,
+      "avgCpuPct": 94,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reservations/tape-chart (14d)",
+      "reqPerSec": 117,
+      "latencyP50": 424,
+      "latencyP97_5": 444,
+      "latencyP99": 476,
+      "total": 1166,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 767,
+      "avgCpuPct": 151,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reports?days=365 (cached)",
+      "reqPerSec": 7742,
+      "latencyP50": 5,
+      "latencyP97_5": 11,
+      "latencyP99": 13,
+      "total": 77413,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 868,
+      "avgCpuPct": 123,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET public availability",
+      "reqPerSec": 506,
+      "latencyP50": 97,
+      "latencyP97_5": 120,
+      "latencyP99": 133,
+      "total": 5060,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 877,
+      "avgCpuPct": 181,
+      "mongoConnections": 42
+    },
+    {
+      "name": "POST /api/reservations (unique slots, write throughput)",
+      "reqPerSec": 257,
+      "latencyP50": 187,
+      "latencyP97_5": 283,
+      "latencyP99": 299,
+      "total": 2569,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 907,
+      "avgCpuPct": 55,
+      "mongoConnections": 42
+    }
+  ],
+  "burst": {
+    "statuses": {
+      "201": 1,
+      "409": 99
+    },
+    "reservationsCreated": 1
+  },
+  "at": "2026-11-11T16:18:11.611Z"
+}

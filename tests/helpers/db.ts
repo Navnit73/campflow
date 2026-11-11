@@ -18,6 +18,8 @@ export function setupTestDatabase() {
   });
 
   afterEach(async () => {
+    const { __resetCache } = await import("@/lib/cache");
+    __resetCache();
     const collections = await mongoose.connection.db!.collections();
     await Promise.all(collections.map((c) => c.deleteMany({})));
   });

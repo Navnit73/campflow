@@ -25,6 +25,8 @@ export interface IBroadcast extends Document {
   /** Client-supplied key: retrying the same request never creates/sends a second broadcast. */
   idempotencyKey?: string;
   startedAt?: Date;
+  /** Why delivery failed or was abandoned (e.g. recovery window exceeded). */
+  error?: string;
   completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -94,6 +96,7 @@ const BroadcastSchema = new Schema<IBroadcast>(
     },
     idempotencyKey: { type: String, trim: true },
     startedAt: { type: Date },
+    error: { type: String },
     completedAt: { type: Date },
   },
   {
@@ -102,6 +105,8 @@ const BroadcastSchema = new Schema<IBroadcast>(
 );
 
 BroadcastSchema.index({ propertyId: 1, createdAt: -1 });
+// Recovery sweep: unfinished broadcasts by age
+BroadcastSchema.index({ status: 1, startedAt: 1 }, { partialFilterExpression: { status: { $in: ["queued", "sending"] } } });
 BroadcastSchema.index(
   { organizationId: 1, idempotencyKey: 1 },
   { unique: true, partialFilterExpression: { idempotencyKey: { $type: "string" } } }

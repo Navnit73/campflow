@@ -278,7 +278,7 @@ export default function GuestsPage() {
         {/* Pagination */}
         {pagination.totalPages > 1 && (
           <div className="p-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50">
-            <div>Showing <span className="font-bold">{guests.length}</span> of <span className="font-bold">{pagination.total}</span> guests</div>
+            <div>Showing <span className="font-bold">{guests.length}</span> of <span className="font-bold">{pagination.total}{(pagination as { totalCapped?: boolean }).totalCapped ? "+" : ""}</span> guests</div>
             <div className="join">
               <button
                 disabled={pagination.page <= 1}

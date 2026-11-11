@@ -195,6 +195,7 @@ export default function PaymentsPage() {
           </div>
           <div className="text-2xl font-black text-slate-900 font-mono">
             {pagination.total}
+            {(pagination as { totalCapped?: boolean }).totalCapped ? "+" : ""}
           </div>
         </div>
       </div>
@@ -354,7 +355,7 @@ export default function PaymentsPage() {
         {/* Pagination */}
         {pagination.totalPages > 1 && (
           <div className="p-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50">
-            <div>Showing <span className="font-bold">{payments.length}</span> of <span className="font-bold">{pagination.total}</span> records</div>
+            <div>Showing <span className="font-bold">{payments.length}</span> of <span className="font-bold">{pagination.total}{(pagination as { totalCapped?: boolean }).totalCapped ? "+" : ""}</span> records</div>
             <div className="join">
               <button
                 disabled={pagination.page <= 1}

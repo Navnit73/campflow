@@ -233,7 +233,7 @@ export default function DashboardPage() {
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-              Currently Onsite ({data?.currentlyOnsiteReservations?.length || 0})
+              Currently Onsite ({data?.stats?.currentlyOnsite ?? data?.currentlyOnsiteReservations?.length ?? 0})
             </button>
           </div>
 

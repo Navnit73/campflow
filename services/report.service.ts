@@ -4,6 +4,9 @@ import { Payment } from "@/models/Payment";
 import { Site } from "@/models/Site";
 import { Property } from "@/models/Property";
 import { connectDB } from "@/lib/db/connection";
+import { cached, propertyScope } from "@/lib/cache";
+
+export const REPORT_CACHE_TTL_MS = 5 * 60_000;
 import { addDays, addDaysStr, parseDateOnly, zonedDateKey, zonedMidnight } from "@/lib/utils/date";
 
 export const MAX_REPORT_DAYS = 366;
@@ -13,8 +16,13 @@ const signedAmount = { $cond: [{ $eq: ["$type", "refund"] }, { $multiply: ["$amo
 export class ReportService {
   static async getFinancialReports(organizationId: string, propertyId: string, days = 30) {
     await connectDB();
-
     const period = Math.min(MAX_REPORT_DAYS, Math.max(1, Math.floor(Number(days) || 30)));
+    return cached("reports", propertyScope(propertyId), `${organizationId}|${period}`, REPORT_CACHE_TTL_MS, () =>
+      this.computeFinancialReports(organizationId, propertyId, period)
+    );
+  }
+
+  static async computeFinancialReports(organizationId: string, propertyId: string, period: number) {
     const propId = new mongoose.Types.ObjectId(propertyId);
     const property = await Property.findOne({ _id: propId, organizationId: new mongoose.Types.ObjectId(organizationId) })
       .select("timezone")

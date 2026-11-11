@@ -11,6 +11,10 @@ import {
 } from "@/lib/validations/public-booking.schema";
 import { calculatePricing, AddOnPricingInput } from "@/lib/utils/pricing";
 import { connectDB } from "@/lib/db/connection";
+import { cached, propertyScope } from "@/lib/cache";
+
+/** Public catalog data (property profile, active add-ons). Availability is never cached. */
+const PUBLIC_CATALOG_TTL_MS = 5 * 60_000;
 import { addDays, diffDays, parseDateOnly } from "@/lib/utils/date";
 import { MailService } from "@/services/mail.service";
 import { commitBooking } from "@/services/reservation.service";
@@ -44,9 +48,13 @@ export class PublicBookingService {
   static async getPropertyBySlug(slug: string) {
     await connectDB();
     const cleanSlug = (slug || "").toLowerCase().trim();
-    const property = cleanSlug ? await Property.findOne({ slug: cleanSlug }).lean() : null;
-    if (!property) throw new NotFoundError("Campground not found");
-    return property;
+    if (!cleanSlug) throw new NotFoundError("Campground not found");
+    // Read on every public request; changes rarely. Not-found results are never cached (loader throws).
+    return cached("property-by-slug", `slug:${cleanSlug}`, "", PUBLIC_CATALOG_TTL_MS, async () => {
+      const property = await Property.findOne({ slug: cleanSlug }).lean();
+      if (!property) throw new NotFoundError("Campground not found");
+      return property;
+    });
   }
 
   static async searchAvailableSites(params: PublicAvailabilityQuery) {
@@ -75,7 +83,9 @@ export class PublicBookingService {
     // Sites, add-ons and conflicting reservations are independent → one round trip.
     const [candidateSites, availableAddOns, conflicting] = await Promise.all([
       Site.find(siteQuery).sort({ sortOrder: 1, currentBaseRate: 1 }).lean(),
-      AddOn.find({ propertyId: property._id, isActive: true }).sort({ sortOrder: 1, createdAt: 1 }).lean(),
+      cached("public-addons", propertyScope(property._id), "", PUBLIC_CATALOG_TTL_MS, () =>
+        AddOn.find({ propertyId: property._id, isActive: true }).sort({ sortOrder: 1, createdAt: 1 }).lean()
+      ),
       Reservation.find({
         propertyId: property._id,
         status: { $in: BLOCKING_STATUSES },

@@ -6,7 +6,7 @@ import { rateLimitRequest } from "@/lib/utils/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
-    rateLimitRequest(req, "public-book-create", 10, 10 * 60_000);
+    await rateLimitRequest(req, "public-book-create", 10, 10 * 60_000);
     const body = await req.json();
     const validated = publicCreateBookingSchema.parse(body);
 

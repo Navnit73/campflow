@@ -4,6 +4,7 @@ import { SiteType, ISiteType } from "@/models/SiteType";
 import { Reservation } from "@/models/Reservation";
 import { CreateSiteInput, UpdateSiteInput, CreateSiteTypeInput, UpdateSiteTypeInput } from "@/lib/validations/site.schema";
 import { connectDB } from "@/lib/db/connection";
+import { invalidateProperty } from "@/lib/cache";
 import { toDotPaths } from "@/lib/utils/flatten";
 
 export class SiteService {
@@ -98,6 +99,7 @@ export class SiteService {
       sortOrder: input.sortOrder || 0,
     });
 
+    await invalidateProperty(propertyId);
     return site.toObject();
   }
 
@@ -166,6 +168,7 @@ export class SiteService {
     if (input.sortOrder !== undefined) site.sortOrder = input.sortOrder;
 
     await site.save();
+    await invalidateProperty(propertyId);
     return site.toObject();
   }
 
@@ -198,6 +201,7 @@ export class SiteService {
       throw err;
     }
 
+    await invalidateProperty(propertyId);
     return { id: siteId, deleted: true };
   }
 
@@ -230,6 +234,7 @@ export class SiteService {
       description: input.description || "",
     });
 
+    await invalidateProperty(propertyId);
     return siteType.toObject();
   }
 
@@ -265,6 +270,7 @@ export class SiteService {
       }
     );
 
+    await invalidateProperty(propertyId);
     return updated;
   }
 }

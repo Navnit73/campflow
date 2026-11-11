@@ -92,3 +92,28 @@ describe("broadcast delivery (audit M12)", () => {
     expect((history[0] as any).recipientEmails).toBeUndefined();
   });
 });
+
+describe("stuck broadcast recovery", () => {
+  it("re-delivers queued/stalled broadcasts inside the safe window and abandons old ones", async () => {
+    const t = await seedTenant();
+    await stay(t, "one@x.com", -1, 2);
+    const mk = async () => (await CommunicationService.createBroadcast(t.orgId, t.propertyId, user, { ...msg, recipientFilter: "all_guests" })).broadcast!._id as any;
+    const now = Date.now();
+    const neverStarted = await mk();
+    // createdAt is immutable through Mongoose; backdate via the driver.
+    await Broadcast.collection.updateOne({ _id: neverStarted }, { $set: { createdAt: new Date(now - 10 * 60_000) } });
+    const stalled = await mk();
+    await Broadcast.updateOne({ _id: stalled }, { $set: { status: "sending", startedAt: new Date(now - 60 * 60_000), "deliveryStats.successful": 1 } });
+    const ancient = await mk();
+    await Broadcast.updateOne({ _id: ancient }, { $set: { status: "sending", startedAt: new Date(now - 30 * 3600_000) } });
+    const fresh = await mk(); // just queued: after() may still be running → left alone
+
+    const res = await CommunicationService.recoverStuckBroadcasts(new Date(now));
+    expect(res).toEqual({ redelivered: 2, abandoned: 1 });
+    const byId = async (id: any) => Broadcast.findById(id).lean();
+    expect((await byId(neverStarted))!.status).toBe("sent");
+    expect((await byId(stalled))!).toMatchObject({ status: "sent", deliveryStats: { successful: 1, failed: 0 } }); // not double counted
+    expect((await byId(ancient))!.status).toBe("failed");
+    expect((await byId(fresh))!.status).toBe("queued");
+  });
+});

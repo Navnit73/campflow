@@ -8,7 +8,7 @@ export async function GET(
   context: { params: Promise<{ code: string }> }
 ) {
   try {
-    rateLimitRequest(req, "public-confirmation", 30, 60_000);
+    await rateLimitRequest(req, "public-confirmation", 30, 60_000);
     const { code } = await context.params;
     const slug = new URL(req.url).searchParams.get("slug") || undefined;
     const data = await PublicBookingService.getBookingConfirmation(code, slug);

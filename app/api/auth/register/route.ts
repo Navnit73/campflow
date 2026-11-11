@@ -3,14 +3,17 @@ import { registerSchema } from "@/lib/validations/auth.schema";
 import { AuthService } from "@/services/auth.service";
 import { apiSuccess, handleApiError } from "@/lib/utils/api-response";
 import { AUTH_COOKIE_NAME } from "@/lib/auth/session";
-import { rateLimitRequest } from "@/lib/utils/rate-limit";
+import { clientIp, rateLimitRequest } from "@/lib/utils/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
-    rateLimitRequest(req, "auth-register", 5, 15 * 60_000);
+    await rateLimitRequest(req, "auth-register", 5, 15 * 60_000);
     const body = await req.json();
     const validated = registerSchema.parse(body);
-    const result = await AuthService.register(validated);
+    const result = await AuthService.register(validated, {
+      ip: clientIp(req),
+      userAgent: req.headers.get("user-agent") || "",
+    });
 
     const { token, ...publicResult } = result;
     const response = apiSuccess(publicResult, "Account registered successfully", 201);

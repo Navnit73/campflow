@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { AddOn, IAddOn, AddOnCategory, AddOnPricingType } from "@/models/AddOn";
 import { CreateAddOnInput, UpdateAddOnInput, QueryAddOnsInput } from "@/lib/validations/addon.schema";
 import { connectDB } from "@/lib/db/connection";
+import { invalidateProperty } from "@/lib/cache";
 import { searchRegex } from "@/lib/utils/regex";
 
 const DEFAULT_ADDONS = [
@@ -132,6 +133,7 @@ export class AddOnService {
       ...input,
     });
 
+    await invalidateProperty(propertyId);
     return addOn.toObject();
   }
 
@@ -159,6 +161,7 @@ export class AddOnService {
       throw err;
     }
 
+    await invalidateProperty(propertyId);
     return addOn;
   }
 
@@ -177,6 +180,7 @@ export class AddOnService {
       throw err;
     }
 
+    await invalidateProperty(propertyId);
     return { success: true };
   }
 
@@ -198,6 +202,7 @@ export class AddOnService {
     }));
 
     const inserted = await AddOn.insertMany(docs);
+    await invalidateProperty(propertyId);
     return { seeded: inserted.length, message: "Standard add-ons created successfully" };
   }
 }

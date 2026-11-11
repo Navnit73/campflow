@@ -188,6 +188,49 @@ export class CommunicationService {
     ).lean();
   }
 
+  /**
+   * Recovers broadcasts interrupted by a crash/timeout (run from cron):
+   *  - "queued" for > QUEUED_GRACE_MS: the post-response delivery never started → deliver now;
+   *  - "sending" for > SENDING_STALE_MS but < RESEND_IDEMPOTENCY_WINDOW_MS: reset and re-deliver.
+   *    Safe because every chunk carries a stable idempotency key, so the provider drops chunks that
+   *    were already sent;
+   *  - older than that window: duplicates can't be ruled out → mark failed instead of resending.
+   */
+  static async recoverStuckBroadcasts(now: Date = new Date()) {
+    await connectDB();
+    const QUEUED_GRACE_MS = 2 * 60_000;
+    const SENDING_STALE_MS = 15 * 60_000;
+    const RESEND_IDEMPOTENCY_WINDOW_MS = 23 * 3600_000; // provider window is 24h; keep a margin
+    const t = now.getTime();
+
+    const abandoned = await Broadcast.updateMany(
+      { status: "sending", startedAt: { $lt: new Date(t - RESEND_IDEMPOTENCY_WINDOW_MS) } },
+      { $set: { status: "failed", completedAt: now, error: "Delivery interrupted and outside the safe resend window" } }
+    );
+
+    const resettable = await Broadcast.find({
+      status: "sending",
+      startedAt: { $lt: new Date(t - SENDING_STALE_MS), $gte: new Date(t - RESEND_IDEMPOTENCY_WINDOW_MS) },
+    })
+      .select("_id")
+      .lean();
+    for (const b of resettable) {
+      await Broadcast.updateOne(
+        { _id: b._id, status: "sending" },
+        { $set: { status: "queued", "deliveryStats.successful": 0, "deliveryStats.failed": 0 } }
+      );
+    }
+
+    const queued = await Broadcast.find({ status: "queued", createdAt: { $lt: new Date(t - QUEUED_GRACE_MS) } })
+      .select("_id")
+      .lean();
+    const ids = new Set([...queued, ...resettable].map((b) => b._id.toString()));
+    let redelivered = 0;
+    for (const id of ids) if (await this.deliverBroadcast(id)) redelivered++;
+
+    return { redelivered, abandoned: abandoned.modifiedCount };
+  }
+
   /** Recent broadcast history (bounded; recipient lists omitted). */
   static async getBroadcastHistory(organizationId: string, propertyId: string, limit = 50) {
     await connectDB();

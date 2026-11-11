@@ -6,7 +6,7 @@ import { rateLimitRequest } from "@/lib/utils/rate-limit";
 
 export async function GET(req: NextRequest) {
   try {
-    rateLimitRequest(req, "public-availability", 120, 60_000);
+    await rateLimitRequest(req, "public-availability", 120, 60_000);
     const { searchParams } = new URL(req.url);
 
     const queryInput = publicAvailabilityQuerySchema.parse({

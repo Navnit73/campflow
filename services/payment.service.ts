@@ -6,9 +6,11 @@ type LeanReservationTotals = Pick<IReservation, "_id" | "status" | "pricing" | "
 import { Guest } from "@/models/Guest";
 import { CreatePaymentInput, QueryPaymentsInput } from "@/lib/validations/payment.schema";
 import { connectDB } from "@/lib/db/connection";
+import { invalidateProperty } from "@/lib/cache";
 import { Property } from "@/models/Property";
 import { ConflictError, NotFoundError, ValidationError } from "@/lib/utils/errors";
 import { searchRegex } from "@/lib/utils/regex";
+import { paginate, SEARCH_MAX_TIME_MS } from "@/lib/utils/pagination";
 
 /** Update pipeline that shifts paidAmount by `delta` and recomputes balanceDue atomically. */
 function applyPaidDelta(delta: number) {
@@ -108,6 +110,7 @@ export class PaymentService {
       await Guest.updateOne({ _id: reservation.guestId }, { $inc: { totalSpent: delta } });
     }
 
+    await invalidateProperty(propId);
     return { payment: payment.toObject(), reservation: updatedReservation! };
   }
 
@@ -146,25 +149,19 @@ export class PaymentService {
       query.$or = [{ transactionReference: rx }, { notes: rx }];
     }
 
-    const [payments, total] = await Promise.all([
+    const isSearch = Boolean(options.search && options.search.trim());
+    const [payments, pagination] = await Promise.all([
       Payment.find(query)
         .populate("reservationId", "confirmationCode checkInDate checkOutDate guestSnapshot siteSnapshot pricing")
         .populate("guestId", "firstName lastName email phone")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
+        .maxTimeMS(isSearch ? SEARCH_MAX_TIME_MS : 0)
         .lean(),
-      Payment.countDocuments(query),
+      paginate(Payment, query, page, limit, isSearch),
     ]);
 
-    return {
-      payments,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    return { payments, pagination };
   }
 }

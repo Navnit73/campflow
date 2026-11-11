@@ -1,0 +1,350 @@
+{
+  "durationSec": 8,
+  "connections": 50,
+  "rounds": 4,
+  "soak": [
+    {
+      "round": 1,
+      "rssMbAfter": 364
+    },
+    {
+      "round": 2,
+      "rssMbAfter": 790
+    },
+    {
+      "round": 3,
+      "rssMbAfter": 812
+    },
+    {
+      "round": 4,
+      "rssMbAfter": 819
+    }
+  ],
+  "payloadKb": {
+    "tapeChart": 714,
+    "dashboard": 75
+  },
+  "connsBefore": 40,
+  "results": [
+    {
+      "name": "GET /api/dashboard (cached)",
+      "reqPerSec": 2160,
+      "latencyP50": 22,
+      "latencyP97_5": 41,
+      "latencyP99": 45,
+      "total": 17279,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 518,
+      "avgCpuPct": 113,
+      "mongoConnections": 41
+    },
+    {
+      "name": "GET /api/reservations (page 1)",
+      "reqPerSec": 641,
+      "latencyP50": 77,
+      "latencyP97_5": 88,
+      "latencyP99": 91,
+      "total": 5128,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 588,
+      "avgCpuPct": 98,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reservations/tape-chart (14d)",
+      "reqPerSec": 116,
+      "latencyP50": 423,
+      "latencyP97_5": 448,
+      "latencyP99": 507,
+      "total": 930,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 749,
+      "avgCpuPct": 151,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reports?days=365 (cached)",
+      "reqPerSec": 7628,
+      "latencyP50": 5,
+      "latencyP97_5": 11,
+      "latencyP99": 13,
+      "total": 61022,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 758,
+      "avgCpuPct": 124,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET public availability",
+      "reqPerSec": 505,
+      "latencyP50": 97,
+      "latencyP97_5": 125,
+      "latencyP99": 131,
+      "total": 4041,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 788,
+      "avgCpuPct": 180,
+      "mongoConnections": 42
+    },
+    {
+      "name": "POST /api/reservations (unique slots, write throughput)",
+      "reqPerSec": 257,
+      "latencyP50": 189,
+      "latencyP97_5": 244,
+      "latencyP99": 260,
+      "total": 2054,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 800,
+      "avgCpuPct": 62,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/dashboard (cached)",
+      "reqPerSec": 2177,
+      "latencyP50": 21,
+      "latencyP97_5": 42,
+      "latencyP99": 53,
+      "total": 17415,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 514,
+      "avgCpuPct": 107,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reservations (page 1)",
+      "reqPerSec": 606,
+      "latencyP50": 81,
+      "latencyP97_5": 98,
+      "latencyP99": 110,
+      "total": 4844,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 593,
+      "avgCpuPct": 92,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reservations/tape-chart (14d)",
+      "reqPerSec": 112,
+      "latencyP50": 434,
+      "latencyP97_5": 496,
+      "latencyP99": 553,
+      "total": 897,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 728,
+      "avgCpuPct": 150,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reports?days=365 (cached)",
+      "reqPerSec": 7294,
+      "latencyP50": 5,
+      "latencyP97_5": 12,
+      "latencyP99": 15,
+      "total": 58348,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 728,
+      "avgCpuPct": 120,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET public availability",
+      "reqPerSec": 492,
+      "latencyP50": 99,
+      "latencyP97_5": 126,
+      "latencyP99": 138,
+      "total": 3934,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 781,
+      "avgCpuPct": 180,
+      "mongoConnections": 42
+    },
+    {
+      "name": "POST /api/reservations (unique slots, write throughput)",
+      "reqPerSec": 248,
+      "latencyP50": 196,
+      "latencyP97_5": 238,
+      "latencyP99": 273,
+      "total": 1984,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 790,
+      "avgCpuPct": 52,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/dashboard (cached)",
+      "reqPerSec": 2138,
+      "latencyP50": 21,
+      "latencyP97_5": 44,
+      "latencyP99": 65,
+      "total": 17103,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 791,
+      "avgCpuPct": 105,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reservations (page 1)",
+      "reqPerSec": 586,
+      "latencyP50": 84,
+      "latencyP97_5": 101,
+      "latencyP99": 113,
+      "total": 4690,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 791,
+      "avgCpuPct": 91,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reservations/tape-chart (14d)",
+      "reqPerSec": 111,
+      "latencyP50": 440,
+      "latencyP97_5": 510,
+      "latencyP99": 527,
+      "total": 885,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 796,
+      "avgCpuPct": 151,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reports?days=365 (cached)",
+      "reqPerSec": 7660,
+      "latencyP50": 5,
+      "latencyP97_5": 11,
+      "latencyP99": 13,
+      "total": 61281,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 795,
+      "avgCpuPct": 123,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET public availability",
+      "reqPerSec": 505,
+      "latencyP50": 97,
+      "latencyP97_5": 123,
+      "latencyP99": 137,
+      "total": 4036,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 806,
+      "avgCpuPct": 180,
+      "mongoConnections": 42
+    },
+    {
+      "name": "POST /api/reservations (unique slots, write throughput)",
+      "reqPerSec": 265,
+      "latencyP50": 186,
+      "latencyP97_5": 206,
+      "latencyP99": 236,
+      "total": 2119,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 811,
+      "avgCpuPct": 52,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/dashboard (cached)",
+      "reqPerSec": 2249,
+      "latencyP50": 20,
+      "latencyP97_5": 42,
+      "latencyP99": 50,
+      "total": 17989,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 812,
+      "avgCpuPct": 106,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reservations (page 1)",
+      "reqPerSec": 582,
+      "latencyP50": 85,
+      "latencyP97_5": 95,
+      "latencyP99": 98,
+      "total": 4659,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 813,
+      "avgCpuPct": 94,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reservations/tape-chart (14d)",
+      "reqPerSec": 114,
+      "latencyP50": 429,
+      "latencyP97_5": 458,
+      "latencyP99": 501,
+      "total": 915,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 820,
+      "avgCpuPct": 150,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET /api/reports?days=365 (cached)",
+      "reqPerSec": 7672,
+      "latencyP50": 5,
+      "latencyP97_5": 11,
+      "latencyP99": 13,
+      "total": 61373,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 818,
+      "avgCpuPct": 120,
+      "mongoConnections": 42
+    },
+    {
+      "name": "GET public availability",
+      "reqPerSec": 505,
+      "latencyP50": 97,
+      "latencyP97_5": 123,
+      "latencyP99": 136,
+      "total": 4036,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 817,
+      "avgCpuPct": 180,
+      "mongoConnections": 42
+    },
+    {
+      "name": "POST /api/reservations (unique slots, write throughput)",
+      "reqPerSec": 271,
+      "latencyP50": 181,
+      "latencyP97_5": 203,
+      "latencyP99": 244,
+      "total": 2164,
+      "non2xx": 0,
+      "errors": 0,
+      "peakRssMb": 819,
+      "avgCpuPct": 50,
+      "mongoConnections": 42
+    }
+  ],
+  "burst": {
+    "statuses": {
+      "201": 1,
+      "409": 99
+    },
+    "reservationsCreated": 1
+  },
+  "at": "2026-11-11T16:21:54.150Z"
+}
