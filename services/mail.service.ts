@@ -1,4 +1,4 @@
-import { sendEmail } from "@/lib/mail/resend";
+import { sendEmail, sendEmailsPaced } from "@/lib/mail/resend";
 import {
   loginNotificationTemplate,
   welcomeRegistrationTemplate,
@@ -130,6 +130,9 @@ export class MailService {
     priority: "general" | "event" | "urgent" | "weather_alert";
     propertyPhone?: string;
     propertyEmail?: string;
+    /** Stable key (e.g. broadcast id) so retried chunks are deduplicated by the provider. */
+    idempotencyKey?: string;
+    onProgress?: (r: { sent: number; failed: number; chunkIndex: number }) => Promise<void> | void;
   }) {
     if (!params.recipients || params.recipients.length === 0) {
       return { success: true, sentCount: 0, failedCount: 0 };
@@ -144,30 +147,12 @@ export class MailService {
       propertyEmail: params.propertyEmail,
     });
 
-    let sentCount = 0;
-    let failedCount = 0;
-
-    // Send in chunks of 20 for rate limiting safety
-    const chunkSize = 20;
-    for (let i = 0; i < params.recipients.length; i += chunkSize) {
-      const batch = params.recipients.slice(i, i + chunkSize);
-      const promises = batch.map((email) =>
-        sendEmail({
-          to: email,
-          subject: `${params.priority === "weather_alert" ? "⚠️ " : ""}${params.propertyName}: ${params.subject}`,
-          html,
-        })
-      );
-
-      const results = await Promise.allSettled(promises);
-      results.forEach((res) => {
-        if (res.status === "fulfilled" && res.value.success) {
-          sentCount++;
-        } else {
-          failedCount++;
-        }
-      });
-    }
+    const subject = `${params.priority === "weather_alert" ? "⚠️ " : ""}${params.propertyName}: ${params.subject}`;
+    const { sent: sentCount, failed: failedCount } = await sendEmailsPaced(
+      params.recipients.map((to) => ({ to, subject, html })),
+      params.idempotencyKey || `broadcast-${Date.now()}`,
+      params.onProgress
+    );
 
     return {
       success: sentCount > 0 || failedCount === 0,

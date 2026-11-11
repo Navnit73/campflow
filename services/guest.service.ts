@@ -3,6 +3,9 @@ import { Guest, IGuest } from "@/models/Guest";
 import { Reservation } from "@/models/Reservation";
 import { CreateGuestInput, UpdateGuestInput, QueryGuestsInput } from "@/lib/validations/guest.schema";
 import { connectDB } from "@/lib/db/connection";
+import { toDotPaths } from "@/lib/utils/flatten";
+import { searchRegex } from "@/lib/utils/regex";
+import { ConflictError } from "@/lib/utils/errors";
 
 export class GuestService {
   static async listGuests(organizationId: string, propertyId: string, options: QueryGuestsInput) {
@@ -18,13 +21,13 @@ export class GuestService {
     };
 
     if (options.search && options.search.trim()) {
-      const search = options.search.trim();
+      const rx = searchRegex(options.search);
       query.$or = [
-        { firstName: { $regex: search, $options: "i" } },
-        { lastName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { phone: { $regex: search, $options: "i" } },
-        { "rvDetails.licensePlate": { $regex: search, $options: "i" } },
+        { firstName: rx },
+        { lastName: rx },
+        { email: rx },
+        { phone: rx },
+        { "rvDetails.licensePlate": rx },
       ];
     }
 
@@ -69,6 +72,7 @@ export class GuestService {
       propertyId: new mongoose.Types.ObjectId(propertyId),
     })
       .sort({ checkInDate: -1 })
+      .limit(200)
       .lean();
 
     return {
@@ -111,14 +115,24 @@ export class GuestService {
   static async updateGuest(organizationId: string, propertyId: string, guestId: string, input: UpdateGuestInput) {
     await connectDB();
 
+    if (input.email !== undefined) {
+      input = { ...input, email: input.email.toLowerCase().trim() };
+      const clash = await Guest.exists({
+        organizationId: new mongoose.Types.ObjectId(organizationId),
+        email: input.email,
+        _id: { $ne: new mongoose.Types.ObjectId(guestId) },
+      });
+      if (clash) throw new ConflictError("Another guest already uses this email address.");
+    }
+
     const guest = await Guest.findOneAndUpdate(
       {
         _id: new mongoose.Types.ObjectId(guestId),
         organizationId: new mongoose.Types.ObjectId(organizationId),
         propertyId: new mongoose.Types.ObjectId(propertyId),
       },
-      { $set: input },
-      { new: true }
+      { $set: toDotPaths(input) },
+      { returnDocument: "after", runValidators: true }
     ).lean();
 
     if (!guest) {

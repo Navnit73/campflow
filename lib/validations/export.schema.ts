@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toUpdateSchema } from "./update-schema";
 
 export const EXPORT_REPORT_TYPES = [
   "excel_master_accounting",
@@ -42,7 +43,7 @@ export const createScheduleSchema = z.object({
 
 export type CreateScheduleInput = z.infer<typeof createScheduleSchema>;
 
-export const updateScheduleSchema = createScheduleSchema.partial();
+export const updateScheduleSchema = toUpdateSchema(createScheduleSchema);
 export type UpdateScheduleInput = z.infer<typeof updateScheduleSchema>;
 
 export const queryHistorySchema = z.object({

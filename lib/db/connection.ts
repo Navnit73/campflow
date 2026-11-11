@@ -44,8 +44,13 @@ export async function connectDB(): Promise<typeof mongoose> {
         }
       }
 
-      // 2. Only if MONGODB_URI is absent in dev mode, fallback to in-memory MongoDB
-      if (process.env.NODE_ENV !== "production") {
+      // 2. Only in local development/test (or with explicit opt-in) fall back to an in-memory MongoDB.
+      // A misconfigured staging server must fail loudly rather than silently run on throwaway data.
+      const allowInMemory =
+        process.env.NODE_ENV === "development" ||
+        process.env.NODE_ENV === "test" ||
+        process.env.ALLOW_IN_MEMORY_DB === "true";
+      if (allowInMemory) {
         try {
           console.log("[MongoDB] MONGODB_URI not found. Initializing MongoMemoryServer for development...");
           const { MongoMemoryServer } = await import("mongodb-memory-server");
@@ -62,7 +67,7 @@ export async function connectDB(): Promise<typeof mongoose> {
         }
       }
 
-      throw new Error("MONGODB_URI is not defined in production environment.");
+      throw new Error("MONGODB_URI is not defined (set ALLOW_IN_MEMORY_DB=true to use a throwaway in-memory database).");
     })();
   }
 

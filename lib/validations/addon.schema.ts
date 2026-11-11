@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toUpdateSchema } from "./update-schema";
 
 export const ADDON_CATEGORIES = [
   "equipment",
@@ -28,7 +29,7 @@ export const createAddOnSchema = z.object({
   sortOrder: z.coerce.number().default(0),
 });
 
-export const updateAddOnSchema = createAddOnSchema.partial();
+export const updateAddOnSchema = toUpdateSchema(createAddOnSchema);
 
 export const queryAddOnsSchema = z.object({
   category: z.string().optional(),

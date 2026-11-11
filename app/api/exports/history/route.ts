@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireRole, ROLES } from "@/lib/auth/session";
 import { ExportService } from "@/services/export.service";
 import { queryHistorySchema } from "@/lib/validations/export.schema";
 import { apiSuccess, handleApiError } from "@/lib/utils/api-response";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await requireAuth(req);
+    const session = await requireRole(ROLES.OWNER, req);
     const { searchParams } = new URL(req.url);
 
     const queryInput = queryHistorySchema.parse({

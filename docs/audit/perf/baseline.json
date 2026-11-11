@@ -1,0 +1,308 @@
+{
+  "label": "baseline",
+  "size": {
+    "sites": 300,
+    "guests": 25000,
+    "reservations": 80000,
+    "paymentsPerReservation": 2
+  },
+  "iterations": 25,
+  "mongod": "8.2.6",
+  "generatedAt": "2026-11-11T15:38:38.459Z",
+  "results": [
+    {
+      "name": "reservations.list (page 1)",
+      "p50": 44.59,
+      "p95": 46.69,
+      "dbCommandsPerCall": 2
+    },
+    {
+      "name": "reservations.list (page 200)",
+      "p50": 69.2,
+      "p95": 70.39,
+      "dbCommandsPerCall": 2
+    },
+    {
+      "name": "reservations.list (search 'smith')",
+      "p50": 133.37,
+      "p95": 134.51,
+      "dbCommandsPerCall": 2
+    },
+    {
+      "name": "reservations.list (status+30d range)",
+      "p50": 1.71,
+      "p95": 1.86,
+      "dbCommandsPerCall": 2
+    },
+    {
+      "name": "reservations.get (detail)",
+      "p50": 0.5,
+      "p95": 0.62,
+      "dbCommandsPerCall": 4
+    },
+    {
+      "name": "tape-chart (14 days)",
+      "p50": 11.44,
+      "p95": 12.11,
+      "dbCommandsPerCall": 4
+    },
+    {
+      "name": "tape-chart (60 days)",
+      "p50": 31.62,
+      "p95": 34.28,
+      "dbCommandsPerCall": 4
+    },
+    {
+      "name": "availability (all sites, 3 nights)",
+      "p50": 3.04,
+      "p95": 3.18,
+      "dbCommandsPerCall": 4
+    },
+    {
+      "name": "dashboard summary",
+      "p50": 23.39,
+      "p95": 25.84,
+      "dbCommandsPerCall": 15
+    },
+    {
+      "name": "reports (30 days)",
+      "p50": 9.96,
+      "p95": 10.88,
+      "dbCommandsPerCall": 7
+    },
+    {
+      "name": "reports (365 days)",
+      "p50": 92.24,
+      "p95": 110.08,
+      "dbCommandsPerCall": 7
+    },
+    {
+      "name": "guests.list (page 1)",
+      "p50": 10.82,
+      "p95": 11.04,
+      "dbCommandsPerCall": 2
+    },
+    {
+      "name": "guests.list (search 'garcia')",
+      "p50": 26.69,
+      "p95": 38.36,
+      "dbCommandsPerCall": 2
+    },
+    {
+      "name": "guests.get (300-stay history)",
+      "p50": 2.49,
+      "p95": 2.72,
+      "dbCommandsPerCall": 3
+    },
+    {
+      "name": "payments.list (page 1)",
+      "p50": 39.6,
+      "p95": 48.25,
+      "dbCommandsPerCall": 4
+    },
+    {
+      "name": "sites.list",
+      "p50": 2.07,
+      "p95": 2.44,
+      "dbCommandsPerCall": 2
+    },
+    {
+      "name": "public.search availability",
+      "p50": 3.93,
+      "p95": 4.49,
+      "dbCommandsPerCall": 6
+    },
+    {
+      "name": "public.confirmation lookup",
+      "p50": 13.36,
+      "p95": 14.32,
+      "dbCommandsPerCall": 5
+    },
+    {
+      "name": "broadcast audience (all guests)",
+      "p50": 73.39,
+      "p95": 75.58,
+      "dbCommandsPerCall": 3
+    },
+    {
+      "name": "reservations.create (+initial payment)",
+      "p50": 2.39,
+      "p95": 3.08,
+      "dbCommandsPerCall": 9
+    },
+    {
+      "name": "payments.record",
+      "p50": 0.74,
+      "p95": 0.85,
+      "dbCommandsPerCall": 5
+    },
+    {
+      "name": "export (master, last 30d)",
+      "p50": 2946.06,
+      "p95": 3102.39,
+      "dbCommandsPerCall": 31
+    }
+  ],
+  "explains": [
+    {
+      "name": "reservations.list page1",
+      "plan": "SORT ← FETCH ← IXSCAN(organizationId_1)",
+      "keysExamined": 80028,
+      "docsExamined": 80028,
+      "nReturned": 20,
+      "ms": 214
+    },
+    {
+      "name": "reservations.list search",
+      "plan": "SORT ← FETCH ← IXSCAN(organizationId_1)",
+      "keysExamined": 80028,
+      "docsExamined": 80028,
+      "nReturned": 20,
+      "ms": 346
+    },
+    {
+      "name": "reservations.count (list total)",
+      "plan": "GROUP ← FETCH ← IXSCAN(organizationId_1)",
+      "keysExamined": 80028,
+      "docsExamined": 80028,
+      "nReturned": 1,
+      "ms": 32
+    },
+    {
+      "name": "tape-chart reservations",
+      "plan": "FETCH ← IXSCAN(propertyId_1_status_1_checkOutDate_1)",
+      "keysExamined": 7228,
+      "docsExamined": 7224,
+      "nReturned": 981,
+      "ms": 5
+    },
+    {
+      "name": "availability overlap (all sites)",
+      "plan": "FETCH ← IXSCAN(propertyId_1_status_1_checkOutDate_1)",
+      "keysExamined": 7104,
+      "docsExamined": 7101,
+      "nReturned": 858,
+      "ms": 5
+    },
+    {
+      "name": "availability overlap (one site)",
+      "plan": "LIMIT ← FETCH ← IXSCAN(propertyId_1_status_1_checkOutDate_1)",
+      "keysExamined": 114,
+      "docsExamined": 113,
+      "nReturned": 1,
+      "ms": 1
+    },
+    {
+      "name": "dashboard arrivals",
+      "plan": "FETCH ← IXSCAN(propertyId_1_status_1_checkInDate_1)",
+      "keysExamined": 25,
+      "docsExamined": 22,
+      "nReturned": 22,
+      "ms": 0
+    },
+    {
+      "name": "dashboard on-site",
+      "plan": "FETCH ← IXSCAN(propertyId_1_status_1_checkInDate_1)",
+      "keysExamined": 2182,
+      "docsExamined": 2182,
+      "nReturned": 2182,
+      "ms": 1
+    },
+    {
+      "name": "dashboard recent",
+      "plan": "LIMIT ← FETCH ← IXSCAN(propertyId_1_createdAt_-1)",
+      "keysExamined": 6,
+      "docsExamined": 6,
+      "nReturned": 6,
+      "ms": 0
+    },
+    {
+      "name": "dashboard outstanding (agg)",
+      "plan": "GROUP ← FETCH ← IXSCAN(propertyId_1_status_1_checkInDate_1)",
+      "keysExamined": 27543,
+      "docsExamined": 27543,
+      "nReturned": 1,
+      "ms": 24
+    },
+    {
+      "name": "reports stays overlap (365d)",
+      "plan": "PROJECTION_SIMPLE ← FETCH ← IXSCAN(propertyId_1_status_1_checkOutDate_1)",
+      "keysExamined": 25363,
+      "docsExamined": 25360,
+      "nReturned": 18940,
+      "ms": 20
+    },
+    {
+      "name": "payments.list page1",
+      "plan": "LIMIT ← FETCH ← IXSCAN(propertyId_1_createdAt_-1)",
+      "keysExamined": 20,
+      "docsExamined": 20,
+      "nReturned": 20,
+      "ms": 0
+    },
+    {
+      "name": "payments by reservation",
+      "plan": "SORT ← FETCH ← IXSCAN(propertyId_1_reservationId_1)",
+      "keysExamined": 30,
+      "docsExamined": 30,
+      "nReturned": 30,
+      "ms": 0
+    },
+    {
+      "name": "guests.list page1",
+      "plan": "SORT ← FETCH ← IXSCAN(organizationId_1)",
+      "keysExamined": 25028,
+      "docsExamined": 25028,
+      "nReturned": 20,
+      "ms": 42
+    },
+    {
+      "name": "guest history",
+      "plan": "SORT ← FETCH ← IXSCAN(propertyId_1_guestId_1)",
+      "keysExamined": 303,
+      "docsExamined": 303,
+      "nReturned": 200,
+      "ms": 1
+    },
+    {
+      "name": "guest by email (booking upsert)",
+      "plan": "FETCH ← IXSCAN(organizationId_1_email_1)",
+      "keysExamined": 0,
+      "docsExamined": 0,
+      "nReturned": 0,
+      "ms": 0
+    },
+    {
+      "name": "confirmation lookup",
+      "plan": "FETCH ← IXSCAN(propertyId_1)",
+      "keysExamined": 80028,
+      "docsExamined": 80028,
+      "nReturned": 1,
+      "ms": 120
+    },
+    {
+      "name": "sites.list",
+      "plan": "SORT ← FETCH ← IXSCAN(organizationId_1_propertyId_1)",
+      "keysExamined": 300,
+      "docsExamined": 300,
+      "nReturned": 300,
+      "ms": 1
+    },
+    {
+      "name": "export guests (sorted)",
+      "plan": "SORT ← FETCH ← IXSCAN(propertyId_1)",
+      "keysExamined": 25028,
+      "docsExamined": 25028,
+      "nReturned": 25028,
+      "ms": 16
+    },
+    {
+      "name": "export reservations 30d ($or)",
+      "plan": "FETCH ← IXSCAN(propertyId_1_createdAt_-1)",
+      "keysExamined": 80028,
+      "docsExamined": 80028,
+      "nReturned": 8437,
+      "ms": 70
+    }
+  ]
+}

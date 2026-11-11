@@ -3,20 +3,30 @@ import { Reservation } from "@/models/Reservation";
 import { Site } from "@/models/Site";
 import { Payment } from "@/models/Payment";
 import { Guest } from "@/models/Guest";
+import { Property } from "@/models/Property";
 import { connectDB } from "@/lib/db/connection";
+import { addDays, addDaysStr, parseDateOnly, zonedDateKey, zonedMidnight } from "@/lib/utils/date";
+
+const LIST_FIELDS =
+  "confirmationCode siteId guestId guestSnapshot siteSnapshot checkInDate checkOutDate status pricing numNights adults children pets source createdAt";
 
 export class DashboardService {
   static async getDashboardSummary(organizationId: string, propertyId: string) {
     await connectDB();
 
-    const orgId = new mongoose.Types.ObjectId(organizationId);
     const propId = new mongoose.Types.ObjectId(propertyId);
+    const property = await Property.findOne({ _id: propId, organizationId: new mongoose.Types.ObjectId(organizationId) })
+      .select("timezone")
+      .lean();
 
-    const now = new Date();
-    // Today midnight UTC
-    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
-    const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
-    const nextWeek = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+    // "Today" is the park's local calendar day (previously UTC, which flipped US parks'
+    // arrivals/departures to "tomorrow" every evening).
+    const todayKey = zonedDateKey(new Date(), property?.timezone);
+    const today = parseDateOnly(todayKey); // reservation dates are stored as UTC-midnight date-only values
+    const tomorrow = addDays(today, 1);
+    const nextWeek = addDays(today, 7);
+    const dayStart = zonedMidnight(todayKey, property?.timezone); // real instants for createdAt ranges
+    const dayEnd = zonedMidnight(addDaysStr(todayKey, 1), property?.timezone);
 
     const [
       totalSites,
@@ -26,35 +36,36 @@ export class DashboardService {
       todayDepartures,
       upcomingReservations,
       recentPayments,
-      todayPayments,
-      activeReservationsBalances,
+      todayRevenueAgg,
+      outstandingAgg,
       recentReservations,
       totalGuests,
     ] = await Promise.all([
       Site.countDocuments({ propertyId: propId, status: { $ne: "inactive" } }),
       Site.countDocuments({ propertyId: propId, status: "maintenance" }),
-      Reservation.find({ propertyId: propId, status: "checked_in" })
-        .sort({ checkOutDate: 1 })
-        .lean(),
+      Reservation.find({ propertyId: propId, status: "checked_in" }).select(LIST_FIELDS).sort({ checkOutDate: 1 }).lean(),
       Reservation.find({
         propertyId: propId,
         status: { $in: ["confirmed", "pending"] },
-        checkInDate: { $gte: todayStart, $lte: todayEnd },
+        checkInDate: { $gte: today, $lt: tomorrow },
       })
+        .select(LIST_FIELDS)
         .sort({ checkInDate: 1 })
         .lean(),
       Reservation.find({
         propertyId: propId,
         status: "checked_in",
-        checkOutDate: { $gte: todayStart, $lte: todayEnd },
+        checkOutDate: { $gte: today, $lt: tomorrow },
       })
+        .select(LIST_FIELDS)
         .sort({ checkOutDate: 1 })
         .lean(),
       Reservation.find({
         propertyId: propId,
         status: { $in: ["confirmed", "pending"] },
-        checkInDate: { $gt: todayEnd, $lte: nextWeek },
+        checkInDate: { $gte: tomorrow, $lte: nextWeek },
       })
+        .select(LIST_FIELDS)
         .sort({ checkInDate: 1 })
         .limit(8)
         .lean(),
@@ -64,21 +75,16 @@ export class DashboardService {
         .populate("reservationId", "confirmationCode")
         .populate("guestId", "firstName lastName")
         .lean(),
-      Payment.find({
-        propertyId: propId,
-        status: "completed",
-        createdAt: { $gte: todayStart, $lte: todayEnd },
-      }).lean(),
-      Reservation.find({
-        propertyId: propId,
-        status: { $in: ["confirmed", "checked_in", "pending"] },
-      })
-        .select("pricing.balanceDue")
-        .lean(),
-      Reservation.find({ propertyId: propId })
-        .sort({ createdAt: -1 })
-        .limit(6)
-        .lean(),
+      // Sums computed in MongoDB instead of loading every document into Node.
+      Payment.aggregate<{ total: number }>([
+        { $match: { propertyId: propId, status: "completed", createdAt: { $gte: dayStart, $lt: dayEnd } } },
+        { $group: { _id: null, total: { $sum: { $cond: [{ $eq: ["$type", "refund"] }, { $multiply: ["$amount", -1] }, "$amount"] } } } },
+      ]),
+      Reservation.aggregate<{ total: number }>([
+        { $match: { propertyId: propId, status: { $in: ["confirmed", "checked_in", "pending"] } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$pricing.balanceDue", 0] } } } },
+      ]),
+      Reservation.find({ propertyId: propId }).select(LIST_FIELDS).sort({ createdAt: -1 }).limit(6).lean(),
       Guest.countDocuments({ propertyId: propId }),
     ]);
 
@@ -86,15 +92,6 @@ export class DashboardService {
     const currentlyOnsiteCount = currentlyOnsiteReservations.length;
     const occupancyRate = Number(((currentlyOnsiteCount / activeSites) * 100).toFixed(1));
     const availableToday = Math.max(0, totalSites - maintenanceSites - currentlyOnsiteCount);
-
-    const todayRevenue = todayPayments.reduce((sum, p) => {
-      const amt = Number(p.amount) || 0;
-      return p.type === "refund" ? sum - amt : sum + amt;
-    }, 0);
-
-    const outstandingBalance = activeReservationsBalances.reduce((sum, r) => {
-      return sum + (Number(r.pricing?.balanceDue) || 0);
-    }, 0);
 
     return {
       stats: {
@@ -105,8 +102,8 @@ export class DashboardService {
         occupancyRate,
         todayArrivalsCount: todayArrivals.length,
         todayDeparturesCount: todayDepartures.length,
-        todayRevenue: Number(todayRevenue.toFixed(2)),
-        outstandingBalance: Number(outstandingBalance.toFixed(2)),
+        todayRevenue: Number((todayRevenueAgg[0]?.total || 0).toFixed(2)),
+        outstandingBalance: Number((outstandingAgg[0]?.total || 0).toFixed(2)),
         totalGuests,
       },
       todayArrivals,

@@ -19,12 +19,10 @@ const AuditLogSchema = new Schema<IAuditLog>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     propertyId: {
       type: Schema.Types.ObjectId,
       ref: "Property",
-      index: true,
     },
     userId: {
       type: Schema.Types.ObjectId,

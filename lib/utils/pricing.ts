@@ -114,7 +114,8 @@ export function calculatePricing(params: CalculatePricingParams): PricingResult 
   // Discounts apply to lodging baseSubtotal
   let discountAmount = 0;
   if (params.discountType === "percentage" && params.discountValue && !isNaN(params.discountValue)) {
-    discountAmount = Number(((baseSubtotal * params.discountValue) / 100).toFixed(2));
+    const pct = Math.min(100, Math.max(0, params.discountValue));
+    discountAmount = Number(((baseSubtotal * pct) / 100).toFixed(2));
   } else if (params.discountType === "fixed_amount" && params.discountValue && !isNaN(params.discountValue)) {
     discountAmount = Number(Math.min(baseSubtotal, params.discountValue).toFixed(2));
   }

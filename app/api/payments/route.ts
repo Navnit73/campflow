@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireAuth, ROLES } from "@/lib/auth/session";
+import { ForbiddenError } from "@/lib/utils/errors";
 import { PaymentService } from "@/services/payment.service";
 import { createPaymentSchema, queryPaymentsSchema } from "@/lib/validations/payment.schema";
 import { apiSuccess, handleApiError } from "@/lib/utils/api-response";
@@ -34,7 +35,13 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     const body = await req.json();
-    const validated = createPaymentSchema.parse(body);
+    const validated = createPaymentSchema.parse({
+      ...body,
+      idempotencyKey: body?.idempotencyKey ?? req.headers.get("idempotency-key") ?? undefined,
+    });
+    if (validated.type === "refund" && !ROLES.MANAGERS.includes(session.role)) {
+      throw new ForbiddenError("Only owners and managers can issue refunds");
+    }
 
     const result = await PaymentService.recordPayment(
       session.organizationId,

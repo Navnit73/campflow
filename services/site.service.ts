@@ -4,6 +4,7 @@ import { SiteType, ISiteType } from "@/models/SiteType";
 import { Reservation } from "@/models/Reservation";
 import { CreateSiteInput, UpdateSiteInput, CreateSiteTypeInput, UpdateSiteTypeInput } from "@/lib/validations/site.schema";
 import { connectDB } from "@/lib/db/connection";
+import { toDotPaths } from "@/lib/utils/flatten";
 
 export class SiteService {
   static async listSites(organizationId: string, propertyId: string, options?: { status?: string; siteTypeId?: string }) {
@@ -15,7 +16,7 @@ export class SiteService {
     };
 
     if (options?.status && options.status !== "all") {
-      query.status = options.status;
+      query.status = String(options.status);
     }
 
     if (options?.siteTypeId) {
@@ -172,6 +173,8 @@ export class SiteService {
     await connectDB();
 
     const activeReservations = await Reservation.countDocuments({
+      organizationId: new mongoose.Types.ObjectId(organizationId),
+      propertyId: new mongoose.Types.ObjectId(propertyId),
       siteId: new mongoose.Types.ObjectId(siteId),
       status: { $in: ["confirmed", "checked_in", "pending"] },
       checkOutDate: { $gte: new Date() },
@@ -239,8 +242,8 @@ export class SiteService {
         organizationId: new mongoose.Types.ObjectId(organizationId),
         propertyId: new mongoose.Types.ObjectId(propertyId),
       },
-      { $set: input },
-      { new: true }
+      { $set: toDotPaths(input) },
+      { returnDocument: "after", runValidators: true }
     ).lean();
 
     if (!updated) {
@@ -251,7 +254,7 @@ export class SiteService {
 
     // Update snapshots on linked sites
     await Site.updateMany(
-      { siteTypeId: updated._id },
+      { siteTypeId: updated._id, propertyId: updated.propertyId },
       {
         $set: {
           "siteTypeSnapshot.name": updated.name,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import apiClient from "@/lib/axios/client";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
@@ -22,6 +22,14 @@ export function PaymentModal({ reservation, isOpen, onClose, onSuccess }: Paymen
   const [method, setMethod] = useState<string>("cash");
   const [transactionReference, setTransactionReference] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  // One idempotency key per payment attempt: retries/double-submits can't record it twice.
+  const idempotencyKey = useRef<string>("");
+  const newIdempotencyKey = () => {
+    idempotencyKey.current =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  };
 
   useEffect(() => {
     if (reservation) {
@@ -30,11 +38,13 @@ export function PaymentModal({ reservation, isOpen, onClose, onSuccess }: Paymen
       setMethod("cash");
       setTransactionReference("");
       setNotes("");
+      newIdempotencyKey();
     }
   }, [reservation, isOpen]);
 
   const handleModeChange = (newMode: "payment" | "refund") => {
     setMode(newMode);
+    newIdempotencyKey();
     if (newMode === "payment") {
       setAmount(reservation?.pricing?.balanceDue || 0);
     } else {
@@ -66,6 +76,7 @@ export function PaymentModal({ reservation, isOpen, onClose, onSuccess }: Paymen
         status: "completed",
         transactionReference,
         notes: notes || (mode === "refund" ? "Manual refund processed" : "Manual payment recorded"),
+        idempotencyKey: idempotencyKey.current,
       });
 
       if (res.data?.success) {

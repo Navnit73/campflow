@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toUpdateSchema } from "./update-schema";
 import { ELECTRIC_HOOKUPS, RIG_TYPES, SITE_CATEGORIES, SURFACE_TYPES } from "@/lib/constants";
 
 export const createSiteTypeSchema = z.object({
@@ -16,7 +17,7 @@ export const createSiteTypeSchema = z.object({
   photos: z.array(z.string()).optional().default([]),
 });
 
-export const updateSiteTypeSchema = createSiteTypeSchema.partial();
+export const updateSiteTypeSchema = toUpdateSchema(createSiteTypeSchema);
 
 export const createSiteSchema = z.object({
   siteNumber: z.string().min(1, "Site number/identifier is required"),
@@ -35,7 +36,7 @@ export const createSiteSchema = z.object({
   sortOrder: z.coerce.number().optional().default(0),
 });
 
-export const updateSiteSchema = createSiteSchema.partial();
+export const updateSiteSchema = toUpdateSchema(createSiteSchema);
 
 export type CreateSiteTypeInput = z.infer<typeof createSiteTypeSchema>;
 export type UpdateSiteTypeInput = z.infer<typeof updateSiteTypeSchema>;

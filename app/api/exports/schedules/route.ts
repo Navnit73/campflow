@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireRole, ROLES } from "@/lib/auth/session";
 import { ExportService } from "@/services/export.service";
 import { createScheduleSchema } from "@/lib/validations/export.schema";
 import { apiSuccess, handleApiError } from "@/lib/utils/api-response";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await requireAuth(req);
+    const session = await requireRole(ROLES.OWNER, req);
 
     const schedules = await ExportService.listSchedules(
       session.organizationId,
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireAuth(req);
+    const session = await requireRole(ROLES.OWNER, req);
     const body = await req.json();
     const validated = createScheduleSchema.parse(body);
 

@@ -83,10 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await apiClient.post("/api/auth/login", credentials);
       if (res.data?.success) {
-        const { user: u, organization: o, property: p, token } = res.data.data;
-        if (token && typeof window !== "undefined") {
-          localStorage.setItem("rv_auth_token", token);
-        }
+        const { user: u, organization: o, property: p } = res.data.data;
+
         setUser(u);
         setOrganization(o);
         setProperty(p);
@@ -101,10 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await apiClient.post("/api/auth/register", data);
       if (res.data?.success) {
-        const { user: u, organization: o, property: p, token } = res.data.data;
-        if (token && typeof window !== "undefined") {
-          localStorage.setItem("rv_auth_token", token);
-        }
+        const { user: u, organization: o, property: p } = res.data.data;
+
         setUser(u);
         setOrganization(o);
         setProperty(p);

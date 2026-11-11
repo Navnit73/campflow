@@ -59,6 +59,10 @@ export interface IReservation extends Document {
   };
   discountId?: mongoose.Types.ObjectId;
   discountCode?: string;
+  /** Discount terms frozen at booking time so later edits don't silently re-price. */
+  discountSnapshot?: { type: "percentage" | "fixed_amount"; value: number };
+  /** Property tax rate frozen at booking time. */
+  taxRatePercent?: number;
   source: ReservationSource;
   specialRequests?: string;
   checkInTimeActual?: Date;
@@ -74,13 +78,11 @@ const ReservationSchema = new Schema<IReservation>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     propertyId: {
       type: Schema.Types.ObjectId,
       ref: "Property",
       required: true,
-      index: true,
     },
     confirmationCode: {
       type: String,
@@ -92,13 +94,11 @@ const ReservationSchema = new Schema<IReservation>(
       type: Schema.Types.ObjectId,
       ref: "Site",
       required: true,
-      index: true,
     },
     guestId: {
       type: Schema.Types.ObjectId,
       ref: "Guest",
       required: true,
-      index: true,
     },
     siteSnapshot: {
       siteNumber: { type: String, required: true },
@@ -121,12 +121,10 @@ const ReservationSchema = new Schema<IReservation>(
     checkInDate: {
       type: Date,
       required: true,
-      index: true,
     },
     checkOutDate: {
       type: Date,
       required: true,
-      index: true,
     },
     numNights: {
       type: Number,
@@ -187,6 +185,15 @@ const ReservationSchema = new Schema<IReservation>(
       type: String,
       trim: true,
     },
+    discountSnapshot: {
+      type: { type: String, enum: ["percentage", "fixed_amount"] },
+      value: { type: Number, min: 0 },
+    },
+    taxRatePercent: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
     source: {
       type: String,
       enum: RESERVATION_SOURCES,
@@ -214,11 +221,25 @@ const ReservationSchema = new Schema<IReservation>(
 );
 
 // Performance & Multi-tenant Compound Indexes
-ReservationSchema.index({ organizationId: 1, confirmationCode: 1 }, { unique: true });
+// Unique per organization; confirmationCode first so public lookups by code (with or without
+// the organization) are an index seek instead of a scan of the whole property.
+ReservationSchema.index({ confirmationCode: 1, organizationId: 1 }, { unique: true });
 ReservationSchema.index({ propertyId: 1, checkInDate: 1, checkOutDate: 1 });
-ReservationSchema.index({ siteId: 1, checkInDate: 1, checkOutDate: 1, status: 1 });
-ReservationSchema.index({ propertyId: 1, status: 1 });
+// Per-site overlap check on the booking critical path (checkOut > start AND checkIn < end):
+// leading with checkOutDate bounds the scan to stays not yet ended; checkIn/status filter in-index.
+ReservationSchema.index({ siteId: 1, checkOutDate: 1, checkInDate: 1, status: 1 });
 ReservationSchema.index({ propertyId: 1, guestId: 1 });
+// Dashboard arrivals / upcoming (status + checkInDate range) and departures (status + checkOutDate range)
+ReservationSchema.index({ propertyId: 1, status: 1, checkInDate: 1 });
+// Equality → Sort/Range → filter: status equality, then checkOutDate range/sort, with checkInDate
+// filtered inside the index (no wasted fetches). Serves the date-window overlap queries (tape chart,
+// availability grid, occupancy report), the on-site list sorted by departure and the departures board.
+ReservationSchema.index({ propertyId: 1, status: 1, checkOutDate: 1, checkInDate: 1 });
+// Recent reservations, reports and exports filtered/sorted by creation time
+ReservationSchema.index({ propertyId: 1, createdAt: -1 });
+// Reservation list: tenant filter + sort fully in-index; list count answered from the index alone.
+ReservationSchema.index({ organizationId: 1, propertyId: 1, checkInDate: -1, createdAt: -1 });
+
 
 export const Reservation: Model<IReservation> =
   mongoose.models.Reservation || mongoose.model<IReservation>("Reservation", ReservationSchema);

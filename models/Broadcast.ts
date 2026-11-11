@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export type BroadcastPriority = "general" | "event" | "urgent" | "weather_alert";
 export type BroadcastRecipientFilter = "all_guests" | "in_house_campers" | "upcoming_arrivals";
-export type BroadcastStatus = "sent" | "failed" | "partial";
+export type BroadcastStatus = "queued" | "sending" | "sent" | "failed" | "partial";
 
 export interface IBroadcast extends Document {
   _id: mongoose.Types.ObjectId;
@@ -22,6 +22,10 @@ export interface IBroadcast extends Document {
   sentByUserId?: mongoose.Types.ObjectId;
   sentByUserName?: string;
   status: BroadcastStatus;
+  /** Client-supplied key: retrying the same request never creates/sends a second broadcast. */
+  idempotencyKey?: string;
+  startedAt?: Date;
+  completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,13 +36,11 @@ const BroadcastSchema = new Schema<IBroadcast>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     propertyId: {
       type: Schema.Types.ObjectId,
       ref: "Property",
       required: true,
-      index: true,
     },
     subject: {
       type: String,
@@ -87,9 +89,12 @@ const BroadcastSchema = new Schema<IBroadcast>(
     },
     status: {
       type: String,
-      enum: ["sent", "failed", "partial"],
-      default: "sent",
+      enum: ["queued", "sending", "sent", "failed", "partial"],
+      default: "queued",
     },
+    idempotencyKey: { type: String, trim: true },
+    startedAt: { type: Date },
+    completedAt: { type: Date },
   },
   {
     timestamps: true,
@@ -97,6 +102,10 @@ const BroadcastSchema = new Schema<IBroadcast>(
 );
 
 BroadcastSchema.index({ propertyId: 1, createdAt: -1 });
+BroadcastSchema.index(
+  { organizationId: 1, idempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKey: { $type: "string" } } }
+);
 
 export const Broadcast: Model<IBroadcast> =
   mongoose.models.Broadcast || mongoose.model<IBroadcast>("Broadcast", BroadcastSchema);

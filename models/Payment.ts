@@ -20,6 +20,8 @@ export interface IPayment extends Document {
   transactionReference?: string;
   notes?: string;
   processedByUserId?: mongoose.Types.ObjectId;
+  /** Client-supplied key making retries of the same payment request idempotent. */
+  idempotencyKey?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,19 +32,16 @@ const PaymentSchema = new Schema<IPayment>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     propertyId: {
       type: Schema.Types.ObjectId,
       ref: "Property",
       required: true,
-      index: true,
     },
     reservationId: {
       type: Schema.Types.ObjectId,
       ref: "Reservation",
       required: true,
-      index: true,
     },
     guestId: {
       type: Schema.Types.ObjectId,
@@ -86,6 +85,10 @@ const PaymentSchema = new Schema<IPayment>(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
+    idempotencyKey: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -94,6 +97,13 @@ const PaymentSchema = new Schema<IPayment>(
 
 PaymentSchema.index({ propertyId: 1, reservationId: 1 });
 PaymentSchema.index({ propertyId: 1, createdAt: -1 });
+// Payment list: tenant filter + createdAt sort in-index, index-only count.
+PaymentSchema.index({ organizationId: 1, propertyId: 1, createdAt: -1 });
+// Idempotent payment recording (only enforced when a key is supplied)
+PaymentSchema.index(
+  { organizationId: 1, idempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKey: { $type: "string" } } }
+);
 
 export const Payment: Model<IPayment> =
   mongoose.models.Payment || mongoose.model<IPayment>("Payment", PaymentSchema);

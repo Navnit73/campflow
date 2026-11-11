@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireAuth, requireRole, ROLES } from "@/lib/auth/session";
 import { AddOnService } from "@/services/addon.service";
 import { createAddOnSchema, queryAddOnsSchema } from "@/lib/validations/addon.schema";
 import { apiSuccess, handleApiError } from "@/lib/utils/api-response";
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireAuth(req);
+    const session = await requireRole(ROLES.MANAGERS, req);
     const body = await req.json();
     const validated = createAddOnSchema.parse(body);
 

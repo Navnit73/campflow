@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireRole, ROLES } from "@/lib/auth/session";
 import { SiteService } from "@/services/site.service";
 import { updateSiteTypeSchema } from "@/lib/validations/site.schema";
 import { apiSuccess, handleApiError } from "@/lib/utils/api-response";
@@ -9,7 +9,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth(req);
+    const session = await requireRole(ROLES.MANAGERS, req);
     const { id } = await context.params;
     const body = await req.json();
     const validated = updateSiteTypeSchema.parse(body);

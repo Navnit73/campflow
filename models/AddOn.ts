@@ -37,13 +37,11 @@ const AddOnSchema = new Schema<IAddOn>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     propertyId: {
       type: Schema.Types.ObjectId,
       ref: "Property",
       required: true,
-      index: true,
     },
     name: {
       type: String,
@@ -60,7 +58,6 @@ const AddOnSchema = new Schema<IAddOn>(
       enum: ["equipment", "merchandise", "utility", "convenience", "activities", "fees"],
       default: "convenience",
       required: true,
-      index: true,
     },
     pricingType: {
       type: String,
@@ -80,7 +77,6 @@ const AddOnSchema = new Schema<IAddOn>(
     isActive: {
       type: Boolean,
       default: true,
-      index: true,
     },
     icon: {
       type: String,

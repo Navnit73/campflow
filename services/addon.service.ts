@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { AddOn, IAddOn, AddOnCategory, AddOnPricingType } from "@/models/AddOn";
 import { CreateAddOnInput, UpdateAddOnInput, QueryAddOnsInput } from "@/lib/validations/addon.schema";
 import { connectDB } from "@/lib/db/connection";
+import { searchRegex } from "@/lib/utils/regex";
 
 const DEFAULT_ADDONS = [
   {
@@ -86,7 +87,7 @@ export class AddOnService {
     };
 
     if (query?.category && query.category !== "all") {
-      filter.category = query.category;
+      filter.category = String(query.category);
     }
 
     if (query?.isActive !== undefined) {
@@ -94,7 +95,7 @@ export class AddOnService {
     }
 
     if (query?.search && query.search.trim()) {
-      filter.name = { $regex: query.search.trim(), $options: "i" };
+      filter.name = searchRegex(query.search);
     }
 
     return AddOn.find(filter).sort({ sortOrder: 1, createdAt: 1 }).lean();
@@ -149,7 +150,7 @@ export class AddOnService {
         propertyId: new mongoose.Types.ObjectId(propertyId),
       },
       { $set: input },
-      { new: true }
+      { returnDocument: "after" }
     ).lean();
 
     if (!addOn) {

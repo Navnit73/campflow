@@ -27,13 +27,11 @@ const SiteTypeSchema = new Schema<ISiteType>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     propertyId: {
       type: Schema.Types.ObjectId,
       ref: "Property",
       required: true,
-      index: true,
     },
     name: {
       type: String,

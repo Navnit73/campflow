@@ -3,38 +3,49 @@ import { Property } from "@/models/Property";
 import { Site } from "@/models/Site";
 import { Guest } from "@/models/Guest";
 import { Reservation } from "@/models/Reservation";
-import { Discount } from "@/models/Discount";
 import { Payment } from "@/models/Payment";
 import { AddOn } from "@/models/AddOn";
 import {
   PublicAvailabilityQuery,
   PublicCreateBookingInput,
 } from "@/lib/validations/public-booking.schema";
-import { calculatePricing } from "@/lib/utils/pricing";
-import { generateConfirmationCode } from "@/lib/utils/code-generator";
+import { calculatePricing, AddOnPricingInput } from "@/lib/utils/pricing";
 import { connectDB } from "@/lib/db/connection";
-import { parseDateOnly } from "@/lib/utils/date";
+import { addDays, diffDays, parseDateOnly } from "@/lib/utils/date";
 import { MailService } from "@/services/mail.service";
+import { commitBooking } from "@/services/reservation.service";
+import { BLOCKING_STATUSES } from "@/lib/booking/status";
+import { resolveDiscountCode } from "@/lib/booking/discount";
+import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/utils/errors";
+import {
+  publicAddOn,
+  publicGuest,
+  publicPayment,
+  publicProperty,
+  publicReservation,
+  publicSite,
+} from "@/lib/booking/public-dto";
+
+const MAX_ONLINE_STAY_NIGHTS = 365;
+const MAX_ADDON_QUANTITY = 50;
+
+function validateStayDates(dIn: Date, dOut: Date) {
+  if (dOut <= dIn) throw new ValidationError("Check-out date must be after check-in date");
+  // Allow "yesterday" (UTC) so guests in timezones behind UTC can still book "today".
+  const earliest = addDays(new Date(), -1);
+  if (dIn < earliest) throw new ValidationError("Check-in date cannot be in the past", { checkInDate: "Date is in the past" });
+  if (diffDays(dIn, dOut) > MAX_ONLINE_STAY_NIGHTS) {
+    throw new ValidationError(`Online stays are limited to ${MAX_ONLINE_STAY_NIGHTS} nights`);
+  }
+}
 
 export class PublicBookingService {
+  /** Resolves a property strictly by slug. (The old fallback to "the first property" leaked other tenants.) */
   static async getPropertyBySlug(slug: string) {
     await connectDB();
-
     const cleanSlug = (slug || "").toLowerCase().trim();
-    let property = await Property.findOne({ slug: cleanSlug }).lean();
-
-    if (!property) {
-      // Fallback: If specific slug isn't found (e.g. initial demo slug or direct test),
-      // gracefully resolve to the registered campground in the database.
-      property = await Property.findOne().sort({ createdAt: 1 }).lean();
-    }
-
-    if (!property) {
-      const err = new Error("Campground not found. Please register your park first.");
-      err.name = "NotFoundError";
-      throw err;
-    }
-
+    const property = cleanSlug ? await Property.findOne({ slug: cleanSlug }).lean() : null;
+    if (!property) throw new NotFoundError("Campground not found");
     return property;
   }
 
@@ -44,94 +55,91 @@ export class PublicBookingService {
     const property = await this.getPropertyBySlug(params.slug);
     const dIn = parseDateOnly(params.checkInDate);
     const dOut = parseDateOnly(params.checkOutDate);
+    if (dOut <= dIn) throw new ValidationError("Check-out date must be after check-in date");
 
-    if (dOut <= dIn) {
-      const err = new Error("Check-out date must be after check-in date");
-      err.name = "ValidationError";
-      throw err;
-    }
-
-    // 1. Query candidate sites matching physical requirements
-    const siteQuery: Record<string, any> = {
-      propertyId: property._id,
-      status: "available",
-    };
-
+    const siteQuery: Record<string, unknown> = { propertyId: property._id, status: "available" };
     if (params.rigLengthFt && params.rigLengthFt > 0) {
       siteQuery["siteTypeSnapshot.maxRigLength"] = { $gte: params.rigLengthFt };
     }
-
-    if (params.siteCategory) {
-      siteQuery["siteTypeSnapshot.category"] = params.siteCategory;
+    if (params.siteCategory) siteQuery["siteTypeSnapshot.category"] = String(params.siteCategory);
+    if (params.hookupType === "50A") {
+      siteQuery["siteTypeSnapshot.hookups.electric"] = "50A";
+    } else if (params.hookupType === "30A") {
+      siteQuery["siteTypeSnapshot.hookups.electric"] = { $in: ["30A", "50A"] };
+    } else if (params.hookupType === "full") {
+      siteQuery["siteTypeSnapshot.hookups.water"] = true;
+      siteQuery["siteTypeSnapshot.hookups.sewer"] = true;
     }
+    if (params.pets && params.pets > 0) siteQuery.petFriendly = true;
 
-    if (params.hookupType) {
-      if (params.hookupType === "50A") {
-        siteQuery["siteTypeSnapshot.hookups.electric"] = "50A";
-      } else if (params.hookupType === "30A") {
-        siteQuery["siteTypeSnapshot.hookups.electric"] = { $in: ["30A", "50A"] };
-      } else if (params.hookupType === "full") {
-        siteQuery["siteTypeSnapshot.hookups.water"] = true;
-        siteQuery["siteTypeSnapshot.hookups.sewer"] = true;
-      }
-    }
-
-    const candidateSites = await Site.find(siteQuery)
-      .sort({ sortOrder: 1, currentBaseRate: 1 })
-      .lean();
-
-    if (candidateSites.length === 0) {
-      return {
-        property,
-        availableSites: [],
-      };
-    }
-
-    const candidateSiteIds = candidateSites.map((s) => s._id);
-
-    // 2. Find overlapping reservations
-    const conflicting = await Reservation.find({
-      propertyId: property._id,
-      siteId: { $in: candidateSiteIds },
-      status: { $in: ["confirmed", "checked_in", "pending"] },
-      checkInDate: { $lt: dOut },
-      checkOutDate: { $gt: dIn },
-    })
-      .select("siteId")
-      .lean();
+    // Sites, add-ons and conflicting reservations are independent → one round trip.
+    const [candidateSites, availableAddOns, conflicting] = await Promise.all([
+      Site.find(siteQuery).sort({ sortOrder: 1, currentBaseRate: 1 }).lean(),
+      AddOn.find({ propertyId: property._id, isActive: true }).sort({ sortOrder: 1, createdAt: 1 }).lean(),
+      Reservation.find({
+        propertyId: property._id,
+        status: { $in: BLOCKING_STATUSES },
+        checkInDate: { $lt: dOut },
+        checkOutDate: { $gt: dIn },
+      })
+        .select("siteId")
+        .lean(),
+    ]);
 
     const bookedSiteIds = new Set(conflicting.map((c) => c.siteId.toString()));
-
-    // 3. Filter and calculate pricing for each available site
     const availableSites = candidateSites
       .filter((s) => !bookedSiteIds.has(s._id.toString()))
-      .map((site) => {
-        const pricing = calculatePricing({
-          nightlyRate: site.currentBaseRate,
-          checkInDate: dIn,
-          checkOutDate: dOut,
-          taxRatePercent: property.taxRatePercent || 0,
-        });
-
-        return {
+      .map((site) =>
+        publicSite({
           ...site,
-          calculatedPricing: pricing,
-        };
-      });
-
-    // 4. Fetch active add-ons for the property
-    const availableAddOns = await AddOn.find({
-      propertyId: property._id,
-      isActive: true,
-    })
-      .sort({ sortOrder: 1, createdAt: 1 })
-      .lean();
+          calculatedPricing: calculatePricing({
+            nightlyRate: site.currentBaseRate,
+            checkInDate: dIn,
+            checkOutDate: dOut,
+            taxRatePercent: property.taxRatePercent || 0,
+          }),
+        })
+      );
 
     return {
-      property,
+      property: publicProperty(property),
       availableSites,
-      availableAddOns,
+      availableAddOns: availableAddOns.map(publicAddOn),
     };
+  }
+
+  /**
+   * Prices add-ons from the database. Client-supplied price/pricingType/taxable/name are ignored:
+   * only {addOnId, quantity} are trusted.
+   */
+  private static async priceAddOnsFromCatalog(
+    propertyId: mongoose.Types.ObjectId,
+    requested: PublicCreateBookingInput["addOns"]
+  ): Promise<AddOnPricingInput[]> {
+    if (!requested?.length) return [];
+
+    if (requested.some((a) => !a.addOnId || !mongoose.isValidObjectId(a.addOnId))) {
+      throw new ValidationError("Each add-on must reference a valid service", { addOns: "Unknown add-on" });
+    }
+    const ids = requested.map((a) => new mongoose.Types.ObjectId(a.addOnId as string));
+
+    const catalog = await AddOn.find({ _id: { $in: ids }, propertyId, isActive: true })
+      .select("name price pricingType taxable")
+      .lean();
+    const byId = new Map(catalog.map((a) => [a._id.toString(), a]));
+
+    return requested.map((req) => {
+      const item = byId.get(String(req.addOnId));
+      if (!item) throw new ValidationError("One or more selected services are no longer available", { addOns: "Unavailable add-on" });
+      return {
+        addOnId: item._id.toString(),
+        name: item.name,
+        price: item.price,
+        pricingType: item.pricingType,
+        taxable: item.taxable,
+        quantity: Math.min(MAX_ADDON_QUANTITY, Math.max(1, Math.floor(Number(req.quantity) || 1))),
+      };
+    });
   }
 
   static async createPublicBooking(input: PublicCreateBookingInput) {
@@ -140,183 +148,142 @@ export class PublicBookingService {
     const property = await this.getPropertyBySlug(input.slug);
     const dIn = parseDateOnly(input.checkInDate);
     const dOut = parseDateOnly(input.checkOutDate);
+    validateStayDates(dIn, dOut);
 
-    if (dOut <= dIn) {
-      const err = new Error("Check-out date must be after check-in date");
-      err.name = "ValidationError";
-      throw err;
-    }
+    if (!mongoose.isValidObjectId(input.siteId)) throw new NotFoundError("The selected site is no longer available.");
+    const email = input.guest.email.toLowerCase().trim();
 
-    // 1. Site check
-    const site = await Site.findOne({
-      _id: new mongoose.Types.ObjectId(input.siteId),
-      propertyId: property._id,
-      status: "available",
-    }).lean();
+    const [site, existingGuest, addOns, discount] = await Promise.all([
+      Site.findOne({ _id: new mongoose.Types.ObjectId(input.siteId), propertyId: property._id, status: "available" }).lean(),
+      Guest.findOne({ organizationId: property.organizationId, email }).select("_id isBlacklisted").lean(),
+      this.priceAddOnsFromCatalog(property._id, input.addOns),
+      input.discountCode ? resolveDiscountCode(property._id, input.discountCode) : Promise.resolve(null),
+    ]);
 
-    if (!site) {
-      const err = new Error("The selected site is no longer available or under maintenance.");
-      err.name = "NotFoundError";
-      throw err;
-    }
+    if (!site) throw new NotFoundError("The selected site is no longer available or under maintenance.");
 
-    // Overlap conflict check
-    const conflict = await Reservation.findOne({
-      propertyId: property._id,
-      siteId: site._id,
-      status: { $in: ["confirmed", "checked_in", "pending"] },
-      checkInDate: { $lt: dOut },
-      checkOutDate: { $gt: dIn },
-    }).lean();
-
-    if (conflict) {
-      const err = new Error("Site was just booked by another camper. Please select another site.");
-      err.name = "ConflictError";
-      throw err;
-    }
-
-    // 2. Create or update guest
-    let guest = await Guest.findOne({
-      organizationId: property.organizationId,
-      email: input.guest.email.toLowerCase().trim(),
-    });
-
-    if (!guest) {
-      guest = await Guest.create({
-        organizationId: property.organizationId,
-        propertyId: property._id,
-        firstName: input.guest.firstName.trim(),
-        lastName: input.guest.lastName.trim(),
-        email: input.guest.email.toLowerCase().trim(),
-        phone: input.guest.phone.trim(),
-        rvDetails: {
-          type: input.guest.rvType,
-          lengthFt: input.guest.rvLengthFt,
-          licensePlate: input.guest.licensePlate || "",
-        },
+    const rigLength = Number(input.guest.rvLengthFt) || 0;
+    const maxRig = site.siteTypeSnapshot?.maxRigLength || 0;
+    if (maxRig > 0 && rigLength > maxRig) {
+      throw new ValidationError(`Your rig (${rigLength} ft) exceeds this site's maximum length of ${maxRig} ft.`, {
+        "guest.rvLengthFt": `Max ${maxRig} ft`,
       });
-    } else {
-      guest.firstName = input.guest.firstName.trim();
-      guest.lastName = input.guest.lastName.trim();
-      guest.phone = input.guest.phone.trim();
-      guest.rvDetails.type = input.guest.rvType;
-      guest.rvDetails.lengthFt = input.guest.rvLengthFt;
-      if (input.guest.licensePlate) guest.rvDetails.licensePlate = input.guest.licensePlate;
-      await guest.save();
+    }
+    if ((input.pets || 0) > 0 && site.petFriendly === false) {
+      throw new ValidationError("This site does not allow pets. Please choose a pet-friendly site.", { pets: "Not allowed" });
+    }
+    if (existingGuest?.isBlacklisted) {
+      throw new ForbiddenError("We're unable to complete this booking online. Please contact the park directly.");
     }
 
-    // 3. Check Discount
-    let discountDoc: any = null;
-    if (input.discountCode) {
-      discountDoc = await Discount.findOne({
-        propertyId: property._id,
-        code: input.discountCode.toUpperCase().trim(),
-        isActive: true,
-      }).lean();
+    // The anonymous flow never overwrites an existing guest profile (anyone can type any email).
+    // Submitted details are stored on the reservation snapshot instead.
+    let guestId = existingGuest?._id;
+    if (!guestId) {
+      try {
+        const created = await Guest.create({
+          organizationId: property.organizationId,
+          propertyId: property._id,
+          firstName: input.guest.firstName.trim(),
+          lastName: input.guest.lastName.trim(),
+          email,
+          phone: input.guest.phone.trim(),
+          rvDetails: {
+            type: input.guest.rvType,
+            lengthFt: input.guest.rvLengthFt,
+            licensePlate: input.guest.licensePlate || "",
+          },
+        });
+        guestId = created._id;
+      } catch (err: unknown) {
+        if ((err as { code?: number })?.code !== 11000) throw err;
+        const raced = await Guest.findOne({ organizationId: property.organizationId, email }).select("_id").lean();
+        guestId = raced!._id;
+      }
     }
 
-    // 4. Calculate final pricing
+    const guestSnapshot = {
+      fullName: `${input.guest.firstName.trim()} ${input.guest.lastName.trim()}`,
+      email,
+      phone: input.guest.phone.trim(),
+      rvType: input.guest.rvType,
+      rvLengthFt: input.guest.rvLengthFt,
+    };
+
+    const taxRate = property.taxRatePercent || 0;
     const pricing = calculatePricing({
       nightlyRate: site.currentBaseRate,
       checkInDate: dIn,
       checkOutDate: dOut,
       adults: input.adults || 2,
-      taxRatePercent: property.taxRatePercent || 0,
-      discountType: discountDoc?.type,
-      discountValue: discountDoc?.value,
-      paidAmount: 0, // Will be marked paid below
-      addOns: input.addOns,
+      taxRatePercent: taxRate,
+      discountType: discount?.type,
+      discountValue: discount?.value,
+      // No payment is captured online yet (no gateway integration), so the full amount is due.
+      // Previously a fake "completed" payment with a made-up TXN reference was recorded.
+      paidAmount: 0,
+      addOns,
     });
 
-    // 5. Generate confirmation code
-    let confirmationCode = generateConfirmationCode();
-    while (
-      await Reservation.findOne({
-        organizationId: property.organizationId,
-        confirmationCode,
-      })
-    ) {
-      confirmationCode = generateConfirmationCode();
-    }
-
-    // Set paid in full for online instant booking
-    pricing.paidAmount = pricing.totalAmount;
-    pricing.balanceDue = 0;
-
-    const reservation = await Reservation.create({
-      organizationId: property.organizationId,
-      propertyId: property._id,
-      confirmationCode,
+    const reservation = await commitBooking({
       siteId: site._id,
-      guestId: guest._id,
-      siteSnapshot: {
-        siteNumber: site.siteNumber,
-        siteTypeName: site.siteTypeSnapshot.name,
-        hookups: site.siteTypeSnapshot.hookups,
-        rigType: site.rigType,
-        baseRate: site.currentBaseRate,
-      },
-      guestSnapshot: {
-        fullName: `${guest.firstName} ${guest.lastName}`,
-        email: guest.email,
-        phone: guest.phone,
-        rvType: guest.rvDetails.type,
-        rvLengthFt: guest.rvDetails.lengthFt,
-      },
+      propertyId: property._id,
       checkInDate: dIn,
       checkOutDate: dOut,
-      numNights: pricing.numNights,
-      adults: input.adults,
-      children: input.children,
-      pets: input.pets,
-      addOns: pricing.calculatedAddOns.map((a) => ({
-        addOnId: a.addOnId ? new mongoose.Types.ObjectId(a.addOnId) : undefined,
-        name: a.name,
-        price: a.price,
-        pricingType: a.pricingType,
-        quantity: a.quantity,
-        subtotal: a.subtotal,
-        taxable: a.taxable,
-      })),
-      status: "confirmed",
-      pricing,
-      discountId: discountDoc?._id,
-      discountCode: discountDoc?.code,
-      source: "online_booking",
-      specialRequests: input.specialRequests || "",
+      checkAvailability: true,
+      conflictMessage: "Site was just booked by another camper. Please select another site.",
+      doc: {
+        organizationId: property.organizationId,
+        propertyId: property._id,
+        siteId: site._id,
+        guestId,
+        siteSnapshot: {
+          siteNumber: site.siteNumber,
+          siteTypeName: site.siteTypeSnapshot.name,
+          hookups: site.siteTypeSnapshot.hookups,
+          rigType: site.rigType,
+          baseRate: site.currentBaseRate,
+        },
+        guestSnapshot,
+        checkInDate: dIn,
+        checkOutDate: dOut,
+        numNights: pricing.numNights,
+        adults: input.adults,
+        children: input.children,
+        pets: input.pets,
+        addOns: pricing.calculatedAddOns.map((a) => ({
+          addOnId: a.addOnId ? new mongoose.Types.ObjectId(a.addOnId) : undefined,
+          name: a.name,
+          price: a.price,
+          pricingType: a.pricingType,
+          quantity: a.quantity,
+          subtotal: a.subtotal,
+          taxable: a.taxable,
+        })),
+        status: "confirmed",
+        pricing,
+        taxRatePercent: taxRate,
+        discountId: discount?._id,
+        discountCode: discount?.code,
+        discountSnapshot: discount ? { type: discount.type, value: discount.value } : undefined,
+        source: "online_booking",
+        specialRequests: (input.specialRequests || "").slice(0, 2000),
+      },
+      guestId: guestId!,
+      guestInc: { totalStays: 1 },
+      discountId: discount?._id,
     });
 
-    // 6. Record Payment
-    await Payment.create({
-      organizationId: property.organizationId,
-      propertyId: property._id,
-      reservationId: reservation._id,
-      guestId: guest._id,
-      amount: pricing.totalAmount,
-      currency: property.currency || "USD",
-      method: "online",
-      status: "completed",
-      transactionReference: `TXN-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-      notes: "Paid online during checkout",
-    });
-
-    await Guest.findByIdAndUpdate(guest._id, {
-      $inc: { totalStays: 1, totalSpent: pricing.totalAmount },
-    });
-
-    if (discountDoc) {
-      await Discount.findByIdAndUpdate(discountDoc._id, { $inc: { usageCount: 1 } });
-    }
-
-    // Send Booking Confirmation Email asynchronously
     MailService.sendBookingConfirmation({
-      to: guest.email,
-      confirmationCode,
-      guestName: `${guest.firstName} ${guest.lastName}`,
+      to: email,
+      confirmationCode: reservation.confirmationCode,
+      guestName: guestSnapshot.fullName,
       propertyName: property.name,
       propertyPhone: property.phone,
       propertyEmail: property.email,
-      propertyAddress: property.address ? `${property.address.street}, ${property.address.city}, ${property.address.state} ${property.address.zip}` : undefined,
+      propertyAddress: property.address
+        ? `${property.address.street}, ${property.address.city}, ${property.address.state} ${property.address.zip}`
+        : undefined,
       siteNumber: site.siteNumber,
       siteTypeName: site.siteTypeSnapshot?.name || "RV Campsite",
       checkInDate: dIn,
@@ -339,39 +306,47 @@ export class PublicBookingService {
     }).catch((err) => console.error("[Mail Error] Failed to send booking confirmation email:", err));
 
     return {
-      confirmationCode,
-      reservation: reservation.toObject(),
-      property,
-      guest: guest.toObject(),
+      confirmationCode: reservation.confirmationCode,
+      reservation: publicReservation(reservation.toObject()),
+      property: publicProperty(property),
+      guest: publicGuest({ _id: guestId, firstName: input.guest.firstName, lastName: input.guest.lastName, email }),
     };
   }
 
-  static async getBookingConfirmation(confirmationCode: string) {
+  /**
+   * Public confirmation lookup. When a slug is supplied the lookup is scoped to that property
+   * (confirmation codes are only unique per organization). Responses are field-allowlisted.
+   */
+  static async getBookingConfirmation(confirmationCode: string, slug?: string) {
     await connectDB();
 
-    const reservation = await Reservation.findOne({
-      confirmationCode: confirmationCode.toUpperCase().trim(),
-    }).lean();
+    const code = String(confirmationCode || "").toUpperCase().trim();
+    if (!/^[A-Z0-9-]{4,20}$/.test(code)) throw new NotFoundError("Reservation confirmation not found");
 
-    if (!reservation) {
-      const err = new Error("Reservation confirmation not found");
-      err.name = "NotFoundError";
-      throw err;
+    const filter: Record<string, unknown> = { confirmationCode: code };
+    if (slug) {
+      const property = await Property.findOne({ slug: slug.toLowerCase().trim() }).select("_id").lean();
+      if (!property) throw new NotFoundError("Reservation confirmation not found");
+      filter.propertyId = property._id;
     }
 
-    const [property, site, guest, payments] = await Promise.all([
+    const reservation = await Reservation.findOne(filter).lean();
+    if (!reservation) throw new NotFoundError("Reservation confirmation not found");
+
+    const [property, site, payments] = await Promise.all([
       Property.findById(reservation.propertyId).lean(),
-      Site.findById(reservation.siteId).lean(),
-      Guest.findById(reservation.guestId).lean(),
-      Payment.find({ reservationId: reservation._id }).lean(),
+      Site.findOne({ _id: reservation.siteId, propertyId: reservation.propertyId }).lean(),
+      Payment.find({ reservationId: reservation._id, propertyId: reservation.propertyId })
+        .select("type amount currency method status createdAt")
+        .lean(),
     ]);
 
     return {
-      reservation,
-      property,
-      site,
-      guest,
-      payments,
+      reservation: publicReservation(reservation),
+      property: publicProperty(property),
+      site: publicSite(site),
+      guest: publicGuest({ firstName: reservation.guestSnapshot?.fullName }),
+      payments: payments.map(publicPayment),
     };
   }
 }

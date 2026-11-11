@@ -229,7 +229,12 @@ export default function CommunicationsPage() {
                   <div className="text-right shrink-0">
                     <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-800">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      {b.recipientCount} Recipients Reached
+                      {b.status === "queued" || b.status === "sending"
+                        ? `Sending to ${b.recipientCount} recipients…`
+                        : `${b.deliveryStats?.successful ?? b.recipientCount} of ${b.recipientCount} delivered`}
+                      {(b.status === "failed" || b.status === "partial") && (
+                        <span className="ml-1 text-amber-700">({b.status})</span>
+                      )}
                     </div>
                     <div className="text-[11px] text-slate-400 mt-0.5">
                       {formatDateTime(b.createdAt)} by {b.sentByUserName || "Staff"}

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireRole, ROLES } from "@/lib/auth/session";
 import { ExportService } from "@/services/export.service";
 import { apiSuccess, handleApiError } from "@/lib/utils/api-response";
 
@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth(req);
+    const session = await requireRole(ROLES.OWNER, req);
     const resolvedParams = await params;
 
     const result = await ExportService.runScheduleNow(

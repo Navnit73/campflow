@@ -19,6 +19,9 @@ function slugify(text: string): string {
     .replace(/\-\-+/g, "-");
 }
 
+// bcrypt hash of a random string; used to equalize login timing for unknown emails.
+const DUMMY_PASSWORD_HASH = "$2b$10$CwTycUXWue0Thq9StjUM0uJ8.Pp0xQ4Y0b3E0Gg1YJ8Wf5i3vX9pW";
+
 export class AuthService {
   static async register(input: RegisterInput) {
     await connectDB();
@@ -191,15 +194,11 @@ export class AuthService {
   static async login(input: LoginInput) {
     await connectDB();
 
-    const user = await User.findOne({ email: input.email.toLowerCase() });
-    if (!user || !user.isActive) {
-      const err = new Error("Invalid email or password");
-      err.name = "UnauthorizedError";
-      throw err;
-    }
+    const user = await User.findOne({ email: input.email.toLowerCase().trim() });
 
-    const isValid = await verifyPassword(input.password, user.passwordHash);
-    if (!isValid) {
+    // Always run one bcrypt comparison so response time doesn't reveal whether the email exists.
+    const isValid = await verifyPassword(input.password, user?.passwordHash || DUMMY_PASSWORD_HASH);
+    if (!user || !user.isActive || !isValid) {
       const err = new Error("Invalid email or password");
       err.name = "UnauthorizedError";
       throw err;

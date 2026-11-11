@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireAuth, requireRole, ROLES } from "@/lib/auth/session";
 import { SiteService } from "@/services/site.service";
 import { createSiteSchema } from "@/lib/validations/site.schema";
 import { apiSuccess, handleApiError } from "@/lib/utils/api-response";
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireAuth(req);
+    const session = await requireRole(ROLES.MANAGERS, req);
     const body = await req.json();
     const validated = createSiteSchema.parse(body);
 

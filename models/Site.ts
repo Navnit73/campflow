@@ -48,19 +48,16 @@ const SiteSchema = new Schema<ISite>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     propertyId: {
       type: Schema.Types.ObjectId,
       ref: "Property",
       required: true,
-      index: true,
     },
     siteTypeId: {
       type: Schema.Types.ObjectId,
       ref: "SiteType",
       required: true,
-      index: true,
     },
     siteNumber: {
       type: String,

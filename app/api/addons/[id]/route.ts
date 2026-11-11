@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireAuth, requireRole, ROLES } from "@/lib/auth/session";
 import { AddOnService } from "@/services/addon.service";
 import { updateAddOnSchema } from "@/lib/validations/addon.schema";
 import { apiSuccess, handleApiError } from "@/lib/utils/api-response";
@@ -29,7 +29,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth(req);
+    const session = await requireRole(ROLES.MANAGERS, req);
     const { id } = await context.params;
     const body = await req.json();
     const validated = updateAddOnSchema.parse(body);
@@ -52,7 +52,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth(req);
+    const session = await requireRole(ROLES.MANAGERS, req);
     const { id } = await context.params;
 
     const result = await AddOnService.deleteAddOn(

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import apiClient from "@/lib/axios/client";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
@@ -85,6 +85,17 @@ export function BroadcastModal({
   );
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  // One key per broadcast attempt: a double-click or network retry can't send twice.
+  const idempotencyKey = useRef<string>("");
+  const ensureKey = () => {
+    if (!idempotencyKey.current) {
+      idempotencyKey.current =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+    return idempotencyKey.current;
+  };
 
   // Audience Count
   const [audienceCount, setAudienceCount] = useState<number | null>(null);
@@ -138,11 +149,13 @@ export function BroadcastModal({
         message,
         priority,
         recipientFilter,
+        idempotencyKey: ensureKey(),
       });
 
       if (res.data?.success) {
+        idempotencyKey.current = "";
         success(
-          `Announcement dispatched to ${res.data.data.recipientCount} campers successfully!`
+          `Announcement queued for ${res.data.data.recipientCount} campers. Delivery status will update in the history list.`
         );
         onSuccess();
         onClose();

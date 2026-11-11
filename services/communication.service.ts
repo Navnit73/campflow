@@ -1,204 +1,200 @@
 import mongoose from "mongoose";
-import { Broadcast, IBroadcast, BroadcastRecipientFilter } from "@/models/Broadcast";
+import { Broadcast, BroadcastRecipientFilter } from "@/models/Broadcast";
 import { Guest } from "@/models/Guest";
 import { Reservation } from "@/models/Reservation";
 import { Property } from "@/models/Property";
 import { CreateBroadcastInput } from "@/lib/validations/communication.schema";
 import { MailService } from "@/services/mail.service";
 import { connectDB } from "@/lib/db/connection";
-import { formatDateKey, addDays, parseDateOnly } from "@/lib/utils/date";
+import { addDays, parseDateOnly, zonedDateKey } from "@/lib/utils/date";
+import { NotFoundError, ValidationError } from "@/lib/utils/errors";
+
+const oid = (id: string | mongoose.Types.ObjectId) => new mongoose.Types.ObjectId(id);
+const normalize = (emails: (string | null | undefined)[]) =>
+  Array.from(new Set(emails.filter(Boolean).map((e) => String(e).toLowerCase().trim()))).filter((e) => e.includes("@"));
+
+function maskEmail(email: string) {
+  const [user, domain] = email.split("@");
+  return `${user.slice(0, 1)}***@${domain}`;
+}
 
 export class CommunicationService {
-  /**
-   * Resolve target recipient emails based on audience filter
-   */
+  /** Resolves recipient emails for an audience, using the park's local "today". */
   static async resolveAudience(
     propertyId: string,
     filter: BroadcastRecipientFilter
   ): Promise<{ emails: string[]; count: number; description: string }> {
     await connectDB();
 
-    const todayStr = formatDateKey(new Date());
-    const todayDate = parseDateOnly(todayStr);
-    const in7DaysDate = addDays(todayDate, 7);
+    const propId = oid(propertyId);
+    const property = await Property.findById(propId).select("timezone").lean();
+    const today = parseDateOnly(zonedDateKey(new Date(), property?.timezone));
+    const in7Days = addDays(today, 7);
 
-    const emailSet = new Set<string>();
-    let description = "";
+    let emails: string[];
+    let description: string;
 
     if (filter === "in_house_campers") {
       description = "Currently Checked-In & In-House Campers";
-      // Find checked-in reservations or active stays spanning today
-      const inHouseRes = await Reservation.find({
-        propertyId: new mongoose.Types.ObjectId(propertyId),
+      // Guests on site right now: checked in (and not past departure), or confirmed with a stay
+      // spanning today. (Previously included arrivals up to 7 days ahead and stale check-ins.)
+      emails = await Reservation.distinct("guestSnapshot.email", {
+        propertyId: propId,
         $or: [
-          { status: "checked_in" },
-          {
-            status: "confirmed",
-            checkInDate: { $lte: in7DaysDate },
-            checkOutDate: { $gte: todayDate },
-          },
+          { status: "checked_in", checkOutDate: { $gte: today } },
+          { status: "confirmed", checkInDate: { $lte: today }, checkOutDate: { $gt: today } },
         ],
-      })
-        .select("guestSnapshot.email")
-        .lean();
-
-      inHouseRes.forEach((r) => {
-        if (r.guestSnapshot?.email) {
-          emailSet.add(r.guestSnapshot.email.toLowerCase().trim());
-        }
       });
     } else if (filter === "upcoming_arrivals") {
       description = "Upcoming Arrivals in the next 7 days";
-      const upcomingRes = await Reservation.find({
-        propertyId: new mongoose.Types.ObjectId(propertyId),
-        status: { $in: ["confirmed", "checked_in"] },
-        checkInDate: { $gte: todayDate, $lte: in7DaysDate },
-      })
-        .select("guestSnapshot.email")
-        .lean();
-
-      upcomingRes.forEach((r) => {
-        if (r.guestSnapshot?.email) {
-          emailSet.add(r.guestSnapshot.email.toLowerCase().trim());
-        }
+      emails = await Reservation.distinct("guestSnapshot.email", {
+        propertyId: propId,
+        status: { $in: ["confirmed", "pending"] },
+        checkInDate: { $gte: today, $lte: in7Days },
       });
     } else {
-      // all_guests
       description = "All Registered Campers in CRM";
-      const [allGuests, allReservations] = await Promise.all([
-        Guest.find({
-          propertyId: new mongoose.Types.ObjectId(propertyId),
-        })
-          .select("email")
-          .lean(),
-        Reservation.find({
-          propertyId: new mongoose.Types.ObjectId(propertyId),
-        })
-          .select("guestSnapshot.email")
-          .lean(),
+      // distinct() returns only unique values instead of streaming every document into Node.
+      const [guestEmails, reservationEmails] = await Promise.all([
+        Guest.distinct("email", { propertyId: propId, isBlacklisted: { $ne: true } }),
+        Reservation.distinct("guestSnapshot.email", { propertyId: propId }),
       ]);
-
-      allGuests.forEach((g) => {
-        if (g.email) {
-          emailSet.add(g.email.toLowerCase().trim());
-        }
-      });
-
-      allReservations.forEach((r) => {
-        if (r.guestSnapshot?.email) {
-          emailSet.add(r.guestSnapshot.email.toLowerCase().trim());
-        }
-      });
+      emails = [...guestEmails, ...reservationEmails];
     }
 
-    const emails = Array.from(emailSet);
-    return {
-      emails,
-      count: emails.length,
-      description,
-    };
+    const unique = normalize(emails);
+    return { emails: unique, count: unique.length, description };
   }
 
-  /**
-   * Get live audience count preview
-   */
   static async getAudienceCount(propertyId: string, filter: BroadcastRecipientFilter) {
     const audience = await this.resolveAudience(propertyId, filter);
     return {
       filter,
       count: audience.count,
       description: audience.description,
-      sampleEmails: audience.emails.slice(0, 5),
+      // Masked: a preview shouldn't expose the guest list.
+      sampleEmails: audience.emails.slice(0, 5).map(maskEmail),
     };
   }
 
   /**
-   * Create and send broadcast announcement to all targeted campers
+   * Creates the broadcast record (status "queued") BEFORE anything is sent.
+   * Delivery happens in `deliverBroadcast`, which the route schedules with `after()` so the HTTP
+   * request isn't held open (and can't time out mid-send). With an idempotency key, a retried
+   * request returns the existing broadcast instead of sending again.
    */
-  static async createAndSendBroadcast(
+  static async createBroadcast(
     organizationId: string,
     propertyId: string,
-    user: { id: string; name: string; email?: string },
-    input: CreateBroadcastInput
+    user: { id: string; name: string },
+    input: CreateBroadcastInput & { idempotencyKey?: string }
   ) {
     await connectDB();
 
-    const property = await Property.findById(propertyId).lean();
-    if (!property) {
-      const err = new Error("Property not found");
-      err.name = "NotFoundError";
-      throw err;
+    const orgId = oid(organizationId);
+    if (input.idempotencyKey) {
+      const existing = await Broadcast.findOne({ organizationId: orgId, idempotencyKey: input.idempotencyKey })
+        .select("-recipientEmails")
+        .lean();
+      if (existing) return { broadcast: existing, created: false };
     }
 
-    // 1. Resolve target emails
+    const property = await Property.findOne({ _id: oid(propertyId), organizationId: orgId }).select("_id").lean();
+    if (!property) throw new NotFoundError("Property not found");
+
     const audience = await this.resolveAudience(propertyId, input.recipientFilter);
-    let targetEmails = audience.emails;
-
-    // If audience is empty (e.g. newly created park in testing), fallback to staff/property email so test broadcast still sends!
-    if (targetEmails.length === 0) {
-      if (user.email) targetEmails.push(user.email);
-      if (property.email && !targetEmails.includes(property.email)) targetEmails.push(property.email);
-    }
-
-    console.log(`[Broadcast Service] Sending broadcast to ${targetEmails.length} recipients:`, targetEmails);
-
-    // 2. Dispatch emails via MailService
-    let deliveryResult = { success: true, sentCount: 0, failedCount: 0 };
-    if (targetEmails.length > 0) {
-      deliveryResult = await MailService.sendMassBroadcast({
-        recipients: targetEmails,
-        propertyName: property.name,
-        subject: input.subject,
-        messageBody: input.message,
-        priority: input.priority,
-        propertyPhone: property.phone,
-        propertyEmail: property.email,
+    // Previously an empty audience silently emailed staff and was recorded as "sent".
+    if (audience.count === 0) {
+      throw new ValidationError(`No recipients match "${audience.description}". Nothing was sent.`, {
+        recipientFilter: "Audience is empty",
       });
     }
 
-    const status =
-      targetEmails.length === 0
-        ? "sent"
-        : deliveryResult.failedCount === 0
-        ? "sent"
-        : deliveryResult.sentCount > 0
-        ? "partial"
-        : "failed";
-
-    // 3. Save Broadcast record
-    const broadcast = await Broadcast.create({
-      organizationId: new mongoose.Types.ObjectId(organizationId),
-      propertyId: new mongoose.Types.ObjectId(propertyId),
-      subject: input.subject,
-      message: input.message,
-      priority: input.priority,
-      recipientFilter: input.recipientFilter,
-      recipientCount: targetEmails.length,
-      recipientEmails: targetEmails,
-      deliveryStats: {
-        total: targetEmails.length,
-        successful: deliveryResult.sentCount,
-        failed: deliveryResult.failedCount,
-      },
-      sentByUserId: new mongoose.Types.ObjectId(user.id),
-      sentByUserName: user.name || "Staff",
-      status,
-    });
-
-    return broadcast.toObject();
+    try {
+      const broadcast = await Broadcast.create({
+        organizationId: orgId,
+        propertyId: oid(propertyId),
+        subject: input.subject,
+        message: input.message,
+        priority: input.priority,
+        recipientFilter: input.recipientFilter,
+        recipientCount: audience.count,
+        recipientEmails: audience.emails,
+        deliveryStats: { total: audience.count, successful: 0, failed: 0 },
+        sentByUserId: oid(user.id),
+        sentByUserName: user.name || "Staff",
+        status: "queued",
+        idempotencyKey: input.idempotencyKey,
+      });
+      const obj = broadcast.toObject() as unknown as Record<string, unknown>;
+      delete obj.recipientEmails;
+      return { broadcast: obj, created: true };
+    } catch (err: unknown) {
+      if ((err as { code?: number })?.code === 11000 && input.idempotencyKey) {
+        const existing = await Broadcast.findOne({ organizationId: orgId, idempotencyKey: input.idempotencyKey })
+          .select("-recipientEmails")
+          .lean();
+        return { broadcast: existing, created: false };
+      }
+      throw err;
+    }
   }
 
   /**
-   * Get past broadcast history for property
+   * Sends a queued broadcast. The atomic queued→sending claim guarantees it runs at most once;
+   * progress is persisted after each batch so a crash leaves an accurate partial record.
    */
-  static async getBroadcastHistory(organizationId: string, propertyId: string) {
+  static async deliverBroadcast(broadcastId: string | mongoose.Types.ObjectId) {
     await connectDB();
 
-    return Broadcast.find({
-      organizationId: new mongoose.Types.ObjectId(organizationId),
-      propertyId: new mongoose.Types.ObjectId(propertyId),
-    })
+    const claimed = await Broadcast.findOneAndUpdate(
+      { _id: oid(broadcastId), status: "queued" },
+      { $set: { status: "sending", startedAt: new Date() } },
+      { returnDocument: "after" }
+    ).lean();
+    if (!claimed) return null; // already sending/sent
+
+    const property = await Property.findById(claimed.propertyId).select("name phone email").lean();
+
+    let result = { sentCount: 0, failedCount: 0 };
+    try {
+      result = await MailService.sendMassBroadcast({
+        recipients: claimed.recipientEmails,
+        propertyName: property?.name || "CampFlow RV Resort",
+        subject: claimed.subject,
+        messageBody: claimed.message,
+        priority: claimed.priority,
+        propertyPhone: property?.phone,
+        propertyEmail: property?.email,
+        idempotencyKey: `broadcast-${claimed._id.toString()}`,
+        onProgress: async ({ sent, failed }) => {
+          await Broadcast.updateOne(
+            { _id: claimed._id },
+            { $inc: { "deliveryStats.successful": sent, "deliveryStats.failed": failed } }
+          );
+        },
+      });
+    } catch (err) {
+      console.error("[Broadcast] Delivery crashed:", err);
+    }
+
+    const total = claimed.recipientEmails.length;
+    const sent = result.sentCount;
+    const status = sent === total ? "sent" : sent > 0 ? "partial" : "failed";
+    return Broadcast.findOneAndUpdate(
+      { _id: claimed._id },
+      { $set: { status, completedAt: new Date() } },
+      { returnDocument: "after", projection: { recipientEmails: 0 } }
+    ).lean();
+  }
+
+  /** Recent broadcast history (bounded; recipient lists omitted). */
+  static async getBroadcastHistory(organizationId: string, propertyId: string, limit = 50) {
+    await connectDB();
+    return Broadcast.find({ organizationId: oid(organizationId), propertyId: oid(propertyId) })
+      .select("-recipientEmails")
       .sort({ createdAt: -1 })
+      .limit(Math.min(200, Math.max(1, limit)))
       .lean();
   }
 }

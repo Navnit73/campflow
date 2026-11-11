@@ -38,13 +38,11 @@ const GuestSchema = new Schema<IGuest>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     propertyId: {
       type: Schema.Types.ObjectId,
       ref: "Property",
       required: true,
-      index: true,
     },
     firstName: {
       type: String,
@@ -61,13 +59,11 @@ const GuestSchema = new Schema<IGuest>(
       required: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
     phone: {
       type: String,
       required: true,
       trim: true,
-      index: true,
     },
     address: {
       street: { type: String, default: "" },
@@ -117,9 +113,13 @@ const GuestSchema = new Schema<IGuest>(
   }
 );
 
-GuestSchema.index({ organizationId: 1, email: 1 });
-GuestSchema.index({ organizationId: 1, phone: 1 });
-GuestSchema.index({ organizationId: 1, lastName: 1 });
+// Unique per organization. Existing deployments: run scripts/migrate-dedupe-guests.ts first
+// (it merges historical duplicates, then replaces the old non-unique index with this one).
+GuestSchema.index({ organizationId: 1, email: 1 }, { unique: true });
+// Guest list (sorted by last update) with an index-only count.
+GuestSchema.index({ organizationId: 1, propertyId: 1, updatedAt: -1 });
+// Property-scoped counts/distinct and exports sorted by creation.
+GuestSchema.index({ propertyId: 1, createdAt: -1 });
 
 export const Guest: Model<IGuest> =
   mongoose.models.Guest || mongoose.model<IGuest>("Guest", GuestSchema);

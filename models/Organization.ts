@@ -28,7 +28,6 @@ const OrganizationSchema = new Schema<IOrganization>(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
     plan: {
       type: String,

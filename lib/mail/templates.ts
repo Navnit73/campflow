@@ -1,5 +1,31 @@
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 
+/** Escapes text for safe interpolation into HTML (element content and quoted attributes). */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Returns a copy of template data with every string HTML-escaped (Dates/numbers untouched).
+ * Template inputs include guest-controlled values (names, add-on names, broadcast text),
+ * so nothing user-supplied may reach the HTML unescaped.
+ */
+function escapeDeep<T>(data: T): T {
+  if (typeof data === "string") return escapeHtml(data) as unknown as T;
+  if (Array.isArray(data)) return data.map((v) => escapeDeep(v)) as unknown as T;
+  if (data && typeof data === "object" && !(data instanceof Date)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(data as Record<string, unknown>)) out[k] = escapeDeep(v);
+    return out as T;
+  }
+  return data;
+}
+
 const BASE_STYLES = `
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   color: #1e293b;
@@ -56,6 +82,7 @@ export function loginNotificationTemplate(data: {
   ipAddress?: string;
   userAgent?: string;
 }) {
+  data = escapeDeep(data);
   return `
     <!DOCTYPE html>
     <html>
@@ -104,6 +131,7 @@ export function welcomeRegistrationTemplate(data: {
   propertyName: string;
   email: string;
 }) {
+  data = escapeDeep(data);
   return `
     <!DOCTYPE html>
     <html>
@@ -177,6 +205,7 @@ export function bookingConfirmationTemplate(data: {
   }>;
   slug?: string;
 }) {
+  data = escapeDeep(data);
   const checkInFormatted = formatDate(data.checkInDate);
   const checkOutFormatted = formatDate(data.checkOutDate);
   const passUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/book/${
@@ -328,6 +357,7 @@ export function massAnnouncementTemplate(data: {
   propertyPhone?: string;
   propertyEmail?: string;
 }) {
+  data = escapeDeep(data);
   let badgeColor = "#059669";
   let badgeText = "Park Announcement";
 
@@ -408,6 +438,7 @@ export function scheduledExportReportTemplate(data: {
     totalBookings?: number;
   };
 }) {
+  data = escapeDeep(data);
   const sizeKb = (data.fileSizeBytes / 1024).toFixed(1);
 
   return `

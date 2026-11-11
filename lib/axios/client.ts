@@ -28,11 +28,13 @@ const apiClient: AxiosInstance = axios.create({
 // Request Interceptor
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // If client-side token is in localStorage, optionally attach Bearer token fallback for hybrid use
+    // Auth is carried by the httpOnly session cookie (withCredentials). Tokens are no longer kept in
+    // localStorage, where any XSS could read them; clear any token left by older versions.
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("rv_auth_token");
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
+      try {
+        localStorage.removeItem("rv_auth_token");
+      } catch {
+        /* storage unavailable */
       }
     }
     return config;

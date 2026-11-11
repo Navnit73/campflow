@@ -48,9 +48,11 @@ export function apiError(
   );
 }
 
+/**
+ * Maps errors to HTTP responses by error *type/name* (not message substrings).
+ * Unknown errors return a generic 500 message; details are logged server-side only.
+ */
 export function handleApiError(err: unknown) {
-  console.error("[API Error]", err);
-
   if (err instanceof ZodError) {
     const fields: Record<string, string> = {};
     for (const issue of err.issues) {
@@ -60,21 +62,45 @@ export function handleApiError(err: unknown) {
     return apiError("VALIDATION_ERROR", "Validation failed on request payload or parameters", 422, fields);
   }
 
-  if (err instanceof Error) {
-    if (err.name === "UnauthorizedError" || err.message.includes("Unauthorized")) {
-      return apiError("UNAUTHORIZED", err.message || "Authentication required", 401);
-    }
-    if (err.name === "ForbiddenError" || err.message.includes("Forbidden")) {
-      return apiError("FORBIDDEN", err.message || "Access denied", 403);
-    }
-    if (err.name === "NotFoundError" || err.message.includes("not found")) {
-      return apiError("NOT_FOUND", err.message || "Resource not found", 404);
-    }
-    if (err.name === "ConflictError" || err.message.includes("Conflict") || err.message.includes("already exists") || (err as any).code === 11000) {
-      return apiError("CONFLICT", err.message || "Resource already exists or conflicting dates", 409);
-    }
-    return apiError("INTERNAL_ERROR", err.message || "An unexpected error occurred", 500);
+  if (err instanceof SyntaxError) {
+    return apiError("BAD_REQUEST", "Request body is not valid JSON", 400);
   }
 
-  return apiError("INTERNAL_ERROR", "Internal server error", 500);
+  if (err instanceof Error) {
+    const e = err as Error & {
+      fields?: Record<string, string>;
+      errors?: Record<string, { message?: string }>;
+      code?: number;
+    };
+    switch (err.name) {
+      case "UnauthorizedError":
+        return apiError("UNAUTHORIZED", err.message || "Authentication required", 401);
+      case "ForbiddenError":
+        return apiError("FORBIDDEN", err.message || "Access denied", 403);
+      case "NotFoundError":
+        return apiError("NOT_FOUND", err.message || "Resource not found", 404);
+      case "ConflictError":
+        return apiError("CONFLICT", err.message || "Conflicting request", 409);
+      case "TooManyRequestsError":
+        return apiError("RATE_LIMITED", err.message, 429);
+      case "ValidationError": {
+        // Our ValidationError carries `fields`; Mongoose's carries `errors`.
+        let fields: Record<string, string> | undefined = e.fields;
+        if (!fields && e.errors && typeof e.errors === "object") {
+          fields = {};
+          for (const [k, v] of Object.entries(e.errors)) fields[k] = v?.message || "Invalid value";
+        }
+        return apiError("VALIDATION_ERROR", err.message || "Validation failed", 422, fields);
+      }
+      case "CastError":
+      case "BSONError":
+        return apiError("INVALID_ID", "Invalid identifier supplied", 400);
+    }
+    if (e.code === 11000) {
+      return apiError("CONFLICT", "Resource already exists", 409);
+    }
+  }
+
+  console.error("[API Error]", err);
+  return apiError("INTERNAL_ERROR", "An unexpected error occurred. Please try again.", 500);
 }

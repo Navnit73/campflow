@@ -35,13 +35,11 @@ const ExportScheduleSchema = new Schema<IExportSchedule>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     propertyId: {
       type: Schema.Types.ObjectId,
       ref: "Property",
       required: true,
-      index: true,
     },
     createdByUserId: {
       type: Schema.Types.ObjectId,
@@ -101,7 +99,6 @@ const ExportScheduleSchema = new Schema<IExportSchedule>(
     isActive: {
       type: Boolean,
       default: true,
-      index: true,
     },
     lastRunAt: {
       type: Date,
@@ -116,7 +113,6 @@ const ExportScheduleSchema = new Schema<IExportSchedule>(
     },
     nextRunAt: {
       type: Date,
-      index: true,
     },
   },
   {

@@ -38,7 +38,6 @@ const PropertySchema = new Schema<IProperty>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     name: {
       type: String,
@@ -51,7 +50,6 @@ const PropertySchema = new Schema<IProperty>(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
     description: {
       type: String,

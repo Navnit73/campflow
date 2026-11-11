@@ -8,7 +8,8 @@ export const createPaymentSchema = z.object({
   method: z.enum(PAYMENT_METHODS).default("credit_card"),
   status: z.enum(PAYMENT_STATUSES).default("completed"),
   transactionReference: z.string().optional().default(""),
-  notes: z.string().optional().default(""),
+  notes: z.string().max(2000).optional().default(""),
+  idempotencyKey: z.string().min(8).max(128).optional(),
 });
 
 export const queryPaymentsSchema = z.object({

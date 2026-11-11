@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toUpdateSchema } from "./update-schema";
 import { RV_TYPES } from "@/lib/constants";
 
 export const createGuestSchema = z.object({
@@ -28,7 +29,7 @@ export const createGuestSchema = z.object({
   isVip: z.boolean().optional().default(false),
 });
 
-export const updateGuestSchema = createGuestSchema.partial();
+export const updateGuestSchema = toUpdateSchema(createGuestSchema);
 
 export const queryGuestsSchema = z.object({
   search: z.string().optional(),

@@ -31,7 +31,7 @@ export default function ConfirmationPage() {
   useEffect(() => {
     if (code) {
       apiClient
-        .get(`/api/public/book/confirmation/${code}`)
+        .get(`/api/public/book/confirmation/${code}`, { params: { slug } })
         .then((res) => {
           if (res.data?.success) {
             setData(res.data.data);
@@ -46,7 +46,7 @@ export default function ConfirmationPage() {
           setLoading(false);
         });
     }
-  }, [code]);
+  }, [code, slug]);
 
   const handlePrint = () => {
     window.print();
@@ -197,11 +197,25 @@ export default function ConfirmationPage() {
               <span>{formatRvType(reservation.guestSnapshot?.rvType || "travel_trailer")}</span>
             </div>
             <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-slate-100">
-              <span>Total Paid:</span>
-              <span className="text-emerald-700 font-mono font-black">
-                {formatCurrency(reservation.pricing?.paidAmount || reservation.pricing?.totalAmount)}
+              <span>Reservation Total:</span>
+              <span className="font-mono font-black">
+                {formatCurrency(reservation.pricing?.totalAmount || 0)}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Paid:</span>
+              <span className="text-emerald-700 font-mono font-bold">
+                {formatCurrency(reservation.pricing?.paidAmount || 0)}
+              </span>
+            </div>
+            {(reservation.pricing?.balanceDue || 0) > 0 && (
+              <div className="flex justify-between font-bold">
+                <span className="text-slate-500">Balance Due at Park:</span>
+                <span className="text-amber-700 font-mono">
+                  {formatCurrency(reservation.pricing?.balanceDue || 0)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

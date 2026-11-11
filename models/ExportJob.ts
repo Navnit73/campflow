@@ -17,7 +17,12 @@ export interface IExportJob extends Document {
   type: ExportReportType;
   status: ExportJobStatus;
   fileName: string;
+  /** @deprecated legacy inline storage; new files live in GridFS (fileId). */
   fileBufferBase64?: string;
+  /** GridFS file id (bucket export_files). */
+  fileId?: mongoose.Types.ObjectId;
+  /** Set when the stored file was purged by the retention policy (history row is kept). */
+  fileDeletedAt?: Date;
   fileSizeBytes?: number;
   recordsCount: number;
   filters?: {
@@ -42,13 +47,11 @@ const ExportJobSchema = new Schema<IExportJob>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
     propertyId: {
       type: Schema.Types.ObjectId,
       ref: "Property",
       required: true,
-      index: true,
     },
     userId: {
       type: Schema.Types.ObjectId,
@@ -80,6 +83,12 @@ const ExportJobSchema = new Schema<IExportJob>(
     fileBufferBase64: {
       type: String,
       select: false, // Omit by default from list queries to keep payload lightweight
+    },
+    fileId: {
+      type: Schema.Types.ObjectId,
+    },
+    fileDeletedAt: {
+      type: Date,
     },
     fileSizeBytes: {
       type: Number,
@@ -120,6 +129,8 @@ const ExportJobSchema = new Schema<IExportJob>(
 
 ExportJobSchema.index({ propertyId: 1, createdAt: -1 });
 ExportJobSchema.index({ organizationId: 1, createdAt: -1 });
+// Retention purge: completed jobs whose file is still stored, oldest first
+ExportJobSchema.index({ completedAt: 1 });
 
 export const ExportJob: Model<IExportJob> =
   mongoose.models.ExportJob || mongoose.model<IExportJob>("ExportJob", ExportJobSchema);
