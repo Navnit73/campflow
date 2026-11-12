@@ -155,13 +155,17 @@ describe("check-in / check-out / cancel guards (audit H3, M6)", () => {
 });
 
 describe("list search (audit M5)", () => {
-  it("treats regex metacharacters literally", async () => {
+  it("never interprets input as a regex (no injection / ReDoS); punctuation only separates words", async () => {
     const t = await seedTenant();
     await book(t);
-    const res = await ReservationService.listReservations(t.orgId, t.propertyId, { search: "(a+)+$", page: 1, limit: 20 } as any);
-    expect(res.reservations).toHaveLength(0);
-    const ok = await ReservationService.listReservations(t.orgId, t.propertyId, { search: "Casey", page: 1, limit: 20 } as any);
-    expect(ok.reservations).toHaveLength(1);
+    const list = (search: string) => ReservationService.listReservations(t.orgId, t.propertyId, { search, page: 1, limit: 20 } as any);
+    // "." is not a wildcard: "c.sey" = words "c" + "sey"; no token starts with "sey".
+    expect((await list("c.sey")).reservations).toHaveLength(0);
+    // A catastrophic-backtracking pattern is just the word "a" (matches site "A1") and returns fast.
+    const started = Date.now();
+    expect((await list("(a+)+$")).pagination.total).toBe((await list("a")).pagination.total);
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect((await list("Casey")).reservations).toHaveLength(1);
   });
 });
 
@@ -236,5 +240,67 @@ describe("staff add-on pricing (catalog-backed)", () => {
     await expect(
       book(a, { addOns: [{ addOnId: b.addOn._id.toString(), name: "x", price: 0, pricingType: "per_stay", quantity: 1 }] })
     ).rejects.toMatchObject({ name: "ValidationError" });
+  });
+});
+
+describe("indexed word-prefix search", () => {
+  it("matches name/email/phone/code/site prefixes, multi-word AND, and not mid-word substrings", async () => {
+    const t = await seedTenant();
+    const r = await book(t, { guest: { ...guestInput("josé.garcía@Example.com"), firstName: "José", lastName: "García", phone: "(555) 867-5309" } });
+    const list = (search: string) =>
+      ReservationService.listReservations(t.orgId, t.propertyId, { search, page: 1, limit: 20 } as any).then((x) => x.reservations.length);
+    expect(await list("gar")).toBe(1); // accent-insensitive prefix
+    expect(await list("jose garcia")).toBe(1); // every word must match
+    expect(await list("jose smith")).toBe(0);
+    expect(await list("example")).toBe(1); // email domain word
+    expect(await list("5309")).toBe(1); // phone last 4
+    expect(await list("555867")).toBe(1); // phone digits prefix
+    expect(await list("a1")).toBe(1); // site number
+    expect(await list(r.confirmationCode.slice(3, 7).toLowerCase())).toBe(1); // code body prefix
+    expect(await list("arcia")).toBe(0); // mid-word substring no longer matches (documented)
+  });
+
+  it("tokens follow edits made through the service", async () => {
+    const t = await seedTenant();
+    const r = await book(t);
+    await ReservationService.updateReservation(t.orgId, t.propertyId, r._id.toString(), { guestSnapshot: { fullName: "Robin Renamed" } });
+    const res = await ReservationService.listReservations(t.orgId, t.propertyId, { search: "renamed", page: 1, limit: 20 } as any);
+    expect(res.reservations).toHaveLength(1);
+  });
+
+  it("legacy documents without tokens are still found (fallback), and the backfill enables the index path", async () => {
+    const t = await seedTenant();
+    await Reservation.collection.insertOne({
+      organizationId: t.org._id, propertyId: t.property._id, siteId: t.site._id, guestId: t.site._id, confirmationCode: "RV-LEGACY99",
+      guestSnapshot: { fullName: "Old Timer", email: "old@x.com", phone: "5551112222" }, siteSnapshot: { siteNumber: "A1" },
+      checkInDate: new Date("2020-01-01"), checkOutDate: new Date("2020-01-02"), status: "checked_out",
+    });
+    const list = (search: string) =>
+      ReservationService.listReservations(t.orgId, t.propertyId, { search, page: 1, limit: 20 } as any).then((x) => x.reservations.length);
+    expect(await list("timer")).toBe(1); // regex fallback while a legacy doc exists
+    const { backfillSearchTokens } = await import("@/lib/migrations/backfill-search-tokens");
+    expect((await backfillSearchTokens()).reservations).toBe(1);
+    expect(await Reservation.exists({ propertyId: t.property._id, searchTokens: null })).toBeNull();
+    expect(await list("timer")).toBe(1); // now via the token index
+  });
+});
+
+describe("cancellation notice (audit L3)", () => {
+  it("emails the guest once per actual cancellation, with escaped content", async () => {
+    const { MailService } = await import("@/services/mail.service");
+    const { vi } = await import("vitest");
+    const spy = vi.spyOn(MailService, "sendReservationCancelled").mockResolvedValue({ success: true } as any);
+    const t = await seedTenant();
+    const r = await book(t, { guest: { ...guestInput("cx@x.com"), firstName: "<b>Pat</b>" } });
+    await ReservationService.cancelReservation(t.orgId, t.propertyId, r._id.toString(), "weather");
+    await ReservationService.cancelReservation(t.orgId, t.propertyId, r._id.toString()); // idempotent repeat
+    await new Promise((res) => setTimeout(res, 50));
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0]).toMatchObject({ to: "cx@x.com", confirmationCode: r.confirmationCode });
+    spy.mockRestore();
+
+    const { reservationCancelledTemplate } = await import("@/lib/mail/templates");
+    const html = reservationCancelledTemplate({ guestName: "<b>Pat</b>", propertyName: "P", confirmationCode: "RV-X", siteNumber: "A1", checkInDate: "2030-01-01", checkOutDate: "2030-01-02", paidAmount: 10 });
+    expect(html).not.toContain("<b>Pat</b>");
   });
 });

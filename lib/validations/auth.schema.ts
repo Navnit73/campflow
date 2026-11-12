@@ -12,6 +12,19 @@ export const registerSchema = z.object({
   organizationName: z.string().min(2, "Park / Organization name must be at least 2 characters"),
   propertyName: z.string().min(2, "Property name must be at least 2 characters").optional(),
   phone: z.string().min(7, "Phone number is required"),
+  /** IANA timezone from the registering browser (e.g. "America/Denver"); editable later in Settings. */
+  timezone: z
+    .string()
+    .max(64)
+    .refine((tz) => {
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: tz });
+        return true;
+      } catch {
+        return false;
+      }
+    }, "Unknown timezone")
+    .optional(),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

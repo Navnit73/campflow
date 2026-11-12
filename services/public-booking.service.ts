@@ -5,12 +5,14 @@ import { Guest } from "@/models/Guest";
 import { Reservation } from "@/models/Reservation";
 import { Payment } from "@/models/Payment";
 import { AddOn } from "@/models/AddOn";
+import { SiteType } from "@/models/SiteType";
 import {
   PublicAvailabilityQuery,
   PublicCreateBookingInput,
 } from "@/lib/validations/public-booking.schema";
 import { calculatePricing, AddOnPricingInput } from "@/lib/utils/pricing";
 import { connectDB } from "@/lib/db/connection";
+import { formatAddress } from "@/lib/utils/format";
 import { cached, propertyScope } from "@/lib/cache";
 
 /** Public catalog data (property profile, active add-ons). Availability is never cached. */
@@ -97,13 +99,18 @@ export class PublicBookingService {
     ]);
 
     const bookedSiteIds = new Set(conflicting.map((c) => c.siteId.toString()));
+    // Party size must fit the site type's max occupancy (audit M3).
+    const partySize = (params.adults || 2) + (params.children || 0);
+    const occupancy = await this.maxOccupancyByType(property._id);
     const availableSites = candidateSites
       .filter((s) => !bookedSiteIds.has(s._id.toString()))
+      .filter((s) => partySize <= (occupancy.get(String(s.siteTypeId)) ?? Infinity))
       .map((site) =>
         publicSite({
           ...site,
           calculatedPricing: calculatePricing({
             nightlyRate: site.currentBaseRate,
+            weekendRate: site.weekendBaseRate,
             checkInDate: dIn,
             checkOutDate: dOut,
             taxRatePercent: property.taxRatePercent || 0,
@@ -116,6 +123,14 @@ export class PublicBookingService {
       availableSites,
       availableAddOns: availableAddOns.map(publicAddOn),
     };
+  }
+
+  /** Site-type → maxOccupancy for a property (cached; site-type writes invalidate the property scope). */
+  private static async maxOccupancyByType(propertyId: mongoose.Types.ObjectId): Promise<Map<string, number>> {
+    const types = await cached("site-type-occupancy", propertyScope(propertyId), "", PUBLIC_CATALOG_TTL_MS, () =>
+      SiteType.find({ propertyId }).select("_id maxOccupancy").lean()
+    );
+    return new Map(types.map((t) => [String(t._id), t.maxOccupancy]));
   }
 
   /**
@@ -182,6 +197,13 @@ export class PublicBookingService {
     if ((input.pets || 0) > 0 && site.petFriendly === false) {
       throw new ValidationError("This site does not allow pets. Please choose a pet-friendly site.", { pets: "Not allowed" });
     }
+    const maxOccupancy = (await this.maxOccupancyByType(property._id)).get(String(site.siteTypeId));
+    const partySize = (input.adults || 2) + (input.children || 0);
+    if (maxOccupancy !== undefined && partySize > maxOccupancy) {
+      throw new ValidationError(`This site allows up to ${maxOccupancy} guests (you selected ${partySize}).`, {
+        adults: `Max ${maxOccupancy} guests`,
+      });
+    }
     if (existingGuest?.isBlacklisted) {
       throw new ForbiddenError("We're unable to complete this booking online. Please contact the park directly.");
     }
@@ -223,6 +245,7 @@ export class PublicBookingService {
     const taxRate = property.taxRatePercent || 0;
     const pricing = calculatePricing({
       nightlyRate: site.currentBaseRate,
+      weekendRate: site.weekendBaseRate,
       checkInDate: dIn,
       checkOutDate: dOut,
       adults: input.adults || 2,
@@ -253,6 +276,7 @@ export class PublicBookingService {
           hookups: site.siteTypeSnapshot.hookups,
           rigType: site.rigType,
           baseRate: site.currentBaseRate,
+          weekendRate: site.weekendBaseRate || undefined,
         },
         guestSnapshot,
         checkInDate: dIn,
@@ -291,9 +315,7 @@ export class PublicBookingService {
       propertyName: property.name,
       propertyPhone: property.phone,
       propertyEmail: property.email,
-      propertyAddress: property.address
-        ? `${property.address.street}, ${property.address.city}, ${property.address.state} ${property.address.zip}`
-        : undefined,
+      propertyAddress: formatAddress(property?.address) || undefined,
       siteNumber: site.siteNumber,
       siteTypeName: site.siteTypeSnapshot?.name || "RV Campsite",
       checkInDate: dIn,

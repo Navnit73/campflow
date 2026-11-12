@@ -579,7 +579,7 @@ export function ReservationDetailModal({
                 </div>
               </div>
               <div>
-                <div className="text-xs text-slate-500 font-semibold">Tax (7.5%)</div>
+                <div className="text-xs text-slate-500 font-semibold">Tax{data.taxRatePercent !== undefined ? ` (${data.taxRatePercent}%)` : ""}</div>
                 <div className="font-bold text-slate-800 font-mono text-xs sm:text-sm">
                   +{formatCurrency(data.pricing?.taxAmount)}
                 </div>

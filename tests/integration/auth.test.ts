@@ -43,3 +43,23 @@ describe("login alerts only for new devices", () => {
     await expect(AuthService.login({ email: "nobody@x.com", password: "wrong-password" })).rejects.toThrow("Invalid email or password");
   });
 });
+
+describe("registration creates no invented data", () => {
+  it("new park has no fabricated amenities, rules, policies, tax, site types; timezone from the browser", async () => {
+    const r = await AuthService.register({ ...reg, email: `fresh${Date.now()}@park.com`, timezone: "America/Chicago" }, laptop);
+    const { Property } = await import("@/models/Property");
+    const { SiteType } = await import("@/models/SiteType");
+    const p = await Property.findById(r.property.id).lean();
+    expect(p).toMatchObject({ description: "", rules: [], amenities: [], taxRatePercent: 0, bookingPolicy: "", quietHours: "", timezone: "America/Chicago" });
+    expect(p!.address).toMatchObject({ street: "", city: "", state: "", zip: "" });
+    expect(await SiteType.countDocuments({ propertyId: r.property.id })).toBe(0);
+  });
+
+  it("rejects an invalid timezone and falls back to UTC when none is sent", async () => {
+    const { registerSchema } = await import("@/lib/validations/auth.schema");
+    expect(() => registerSchema.parse({ ...reg, timezone: "Mars/Base" })).toThrow();
+    const r = await AuthService.register({ ...reg, email: `utc${Date.now()}@park.com` }, laptop);
+    const { Property } = await import("@/models/Property");
+    expect((await Property.findById(r.property.id).lean())!.timezone).toBe("UTC");
+  });
+});

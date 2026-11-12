@@ -65,3 +65,10 @@ export function formatRigType(rigType: string): string {
   if (rigType === "tent") return "Tent Space";
   return rigType;
 }
+
+/** Joins the non-empty parts of a postal address ("" if none) — never emits ", ,". */
+export function formatAddress(a?: { street?: string; city?: string; state?: string; zip?: string } | null): string {
+  if (!a) return "";
+  const stateZip = [a.state, a.zip].filter((x) => x && String(x).trim()).join(" ");
+  return [a.street, a.city, stateZip].filter((x) => x && String(x).trim()).join(", ");
+}

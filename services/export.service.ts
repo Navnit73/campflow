@@ -338,7 +338,7 @@ export class ExportService {
     const orgId = oid(organizationId);
     const propId = oid(propertyId);
     const property = await Property.findOne({ _id: propId, organizationId: orgId }).lean();
-    const propertyName = property?.name || "CampFlow RV Resort";
+    const propertyName = property?.name || "Campground";
     const range = this.resolveDateRange(
       { startDate: input.startDate, endDate: input.endDate, preset: input.preset },
       property?.timezone
@@ -604,7 +604,7 @@ export class ExportService {
     if (!schedule) throw new NotFoundError("Export schedule not found.");
 
     const property = await Property.findById(schedule.propertyId).lean();
-    const propertyName = property?.name || "CampFlow RV Resort";
+    const propertyName = property?.name || "Campground";
     const range = this.resolveDateRange({ frequency: schedule.frequency }, property?.timezone);
 
     const data = await this.loadReportData(schedule.propertyId, schedule.type, range, schedule.filters || {});

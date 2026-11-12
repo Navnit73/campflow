@@ -690,7 +690,8 @@ export class ExcelExportService {
       sheet.addRow([]);
     }
 
-    const defaultTaxRate = propertySettings?.taxRatePercent || 7.5;
+    // The park's configured rate (0 is a valid rate — `|| 7.5` reported a phantom 7.5% for tax-free parks).
+    const defaultTaxRate = propertySettings?.taxRatePercent ?? 0;
 
     const columns = [
       { header: "Invoice / Folio #", width: 16 },
@@ -735,7 +736,7 @@ export class ExcelExportService {
       const taxableBase = Math.max(0, (pricing.baseSubtotal || 0) - (pricing.discountAmount || 0)) + taxableAddOns;
       const effectiveTaxRate = taxableBase > 0 && pricing.taxAmount > 0
         ? Number(((pricing.taxAmount / taxableBase) * 100).toFixed(2))
-        : defaultTaxRate;
+        : (r.taxRatePercent ?? defaultTaxRate);
 
       const issueDateStr = r.createdAt ? new Date(r.createdAt).toISOString().split("T")[0] : "—";
 

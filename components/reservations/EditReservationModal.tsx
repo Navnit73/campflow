@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/hooks/useAuth";
 import React, { useState, useEffect } from "react";
 import apiClient from "@/lib/axios/client";
 import { Modal } from "@/components/ui/Modal";
@@ -194,12 +195,15 @@ export function EditReservationModal({
     }));
 
   // Recalculate estimated pricing
+  const { property: authProperty } = useAuth();
   const pricing = calculatePricing({
-    nightlyRate: selectedSite?.currentBaseRate || reservation?.pricing?.nightlyRate || 50,
+    nightlyRate: selectedSite?.currentBaseRate ?? reservation?.siteSnapshot?.baseRate ?? reservation?.pricing?.nightlyRate ?? 0,
     checkInDate,
     checkOutDate: checkOutDate > checkInDate ? checkOutDate : checkInDate,
     adults: Number(adults) || 2,
-    taxRatePercent: 7.5,
+    weekendRate: selectedSite?.weekendBaseRate ?? reservation?.siteSnapshot?.weekendRate,
+    // Park's real tax rate (was hardcoded 7.5% → previews disagreed with the server total).
+    taxRatePercent: reservation?.taxRatePercent ?? authProperty?.taxRatePercent ?? 0,
     paidAmount: reservation?.pricing?.paidAmount || 0,
     addOns: appliedAddOns,
   });
@@ -603,7 +607,7 @@ export function EditReservationModal({
               </div>
             )}
             <div className="flex justify-between text-slate-600">
-              <span>Taxes & Fees (7.5%):</span>
+              <span>Taxes & Fees ({reservation?.taxRatePercent ?? authProperty?.taxRatePercent ?? 0}%):</span>
               <span className="font-mono">{formatCurrency(pricing.taxAmount)}</span>
             </div>
             <div className="flex justify-between text-slate-600">

@@ -14,7 +14,8 @@ import {
 import { calculatePricing } from "@/lib/utils/pricing";
 import { generateConfirmationCode } from "@/lib/utils/code-generator";
 import { connectDB } from "@/lib/db/connection";
-import { invalidateProperty } from "@/lib/cache";
+import { formatAddress } from "@/lib/utils/format";
+import { cached, invalidateProperty, propertyScope } from "@/lib/cache";
 import { parseDateOnly, formatDateKey, addDays } from "@/lib/utils/date";
 import { MailService } from "@/services/mail.service";
 import { withSiteLock } from "@/lib/booking/site-lock";
@@ -23,6 +24,7 @@ import { BLOCKING_STATUSES, canTransition, isBlocking } from "@/lib/booking/stat
 import { resolveDiscountCode, ResolvedDiscount } from "@/lib/booking/discount";
 import { ConflictError, NotFoundError, ValidationError } from "@/lib/utils/errors";
 import { escapeRegex, searchRegex } from "@/lib/utils/regex";
+import { tokenFilter } from "@/lib/search/tokens";
 import { confirmationCodePrefix, paginate, SEARCH_MAX_TIME_MS } from "@/lib/utils/pagination";
 import { ReservationStatus } from "@/lib/constants";
 
@@ -233,6 +235,7 @@ export class ReservationService {
     const taxRate = property?.taxRatePercent || 0;
     const pricing = calculatePricing({
       nightlyRate: site.currentBaseRate,
+      weekendRate: site.weekendBaseRate,
       checkInDate: dIn,
       checkOutDate: dOut,
       adults: input.adults || 2,
@@ -269,6 +272,7 @@ export class ReservationService {
           hookups: site.siteTypeSnapshot.hookups,
           rigType: site.rigType,
           baseRate: site.currentBaseRate,
+          weekendRate: site.weekendBaseRate || undefined,
         },
         guestSnapshot,
         checkInDate: dIn,
@@ -319,12 +323,10 @@ export class ReservationService {
         to: guestSnapshot.email,
         confirmationCode: reservation.confirmationCode,
         guestName: guestSnapshot.fullName,
-        propertyName: property?.name || "CampFlow RV Resort",
+        propertyName: property?.name || "Your campground",
         propertyPhone: property?.phone,
         propertyEmail: property?.email,
-        propertyAddress: property?.address
-          ? `${property.address.street}, ${property.address.city}, ${property.address.state} ${property.address.zip}`
-          : undefined,
+        propertyAddress: formatAddress(property?.address) || undefined,
         siteNumber: site.siteNumber,
         siteTypeName: site.siteTypeSnapshot.name,
         checkInDate: dIn,
@@ -505,6 +507,7 @@ export class ReservationService {
             hookups: site.siteTypeSnapshot.hookups,
             rigType: site.rigType,
             baseRate: site.currentBaseRate,
+          weekendRate: site.weekendBaseRate || undefined,
           };
         }
         reservation.checkInDate = newCheckIn;
@@ -537,6 +540,7 @@ export class ReservationService {
             : reservation.addOns || [];
         const pricing = calculatePricing({
           nightlyRate: reservation.siteSnapshot.baseRate,
+          weekendRate: reservation.siteSnapshot.weekendRate,
           checkInDate: reservation.checkInDate,
           checkOutDate: reservation.checkOutDate,
           adults: reservation.adults,
@@ -672,6 +676,27 @@ export class ReservationService {
     if (before) {
       if (isBlocking(before.status)) await adjustGuestStays(before.guestId, -1);
       await invalidateProperty(propertyId);
+      // Notify the guest once per actual cancellation (idempotent repeats return below without emailing).
+      if (before.guestSnapshot?.email) {
+        Property.findById(propertyId)
+          .select("name phone email")
+          .lean()
+          .then((property) =>
+            MailService.sendReservationCancelled({
+              to: before.guestSnapshot.email,
+              guestName: before.guestSnapshot.fullName,
+              propertyName: property?.name || "Your campground",
+              confirmationCode: before.confirmationCode,
+              siteNumber: before.siteSnapshot?.siteNumber || "",
+              checkInDate: before.checkInDate,
+              checkOutDate: before.checkOutDate,
+              paidAmount: before.pricing?.paidAmount || 0,
+              propertyPhone: property?.phone,
+              propertyEmail: property?.email,
+            })
+          )
+          .catch((err) => console.error("[Mail Error] Failed to send cancellation email:", err));
+      }
       return (await Reservation.findById(before._id).lean())!;
     }
 
@@ -709,14 +734,22 @@ export class ReservationService {
       // Fast path: anchored, case-sensitive prefix → seek on the {confirmationCode, organizationId} index.
       query.confirmationCode = { $regex: `^${escapeRegex(codePrefix)}` };
     } else if (search) {
-      const rx = searchRegex(search);
-      query.$or = [
-        { confirmationCode: rx },
-        { "guestSnapshot.fullName": rx },
-        { "guestSnapshot.email": rx },
-        { "guestSnapshot.phone": rx },
-        { "siteSnapshot.siteNumber": rx },
-      ];
+      const tokens = tokenFilter(search);
+      // Records written before search tokens existed fall back to the (unindexed) substring scan
+      // until `scripts/migrate-search-tokens.ts` has run; detecting them is a single index seek.
+      const legacy = await Reservation.exists({ propertyId: oid(propertyId), searchTokens: null });
+      if (tokens && !legacy) {
+        Object.assign(query, tokens);
+      } else {
+        const rx = searchRegex(search);
+        query.$or = [
+          { confirmationCode: rx },
+          { "guestSnapshot.fullName": rx },
+          { "guestSnapshot.email": rx },
+          { "guestSnapshot.phone": rx },
+          { "siteSnapshot.siteNumber": rx },
+        ];
+      }
     }
     const isSearch = Boolean(search) && !codePrefix;
 
@@ -740,14 +773,18 @@ export class ReservationService {
     const endDate = addDays(startDate, days);
 
     const [sites, reservations] = await Promise.all([
-      Site.find({
-        organizationId: oid(organizationId),
-        propertyId: oid(propertyId),
-        status: { $ne: "inactive" },
-      })
-        .select("siteNumber name status siteTypeId siteTypeSnapshot currentBaseRate rigType sortOrder petFriendly amenities")
-        .sort({ sortOrder: 1, siteNumber: 1 })
-        .lean(),
+      // Site rows change only through site writes (which invalidate the property scope), so they're
+      // served from cache; reservation rows below are always read live.
+      cached("tape-chart-sites", propertyScope(propertyId), organizationId, 60_000, () =>
+        Site.find({
+          organizationId: oid(organizationId),
+          propertyId: oid(propertyId),
+          status: { $ne: "inactive" },
+        })
+          .select("siteNumber name status siteTypeId siteTypeSnapshot currentBaseRate rigType sortOrder petFriendly amenities")
+          .sort({ sortOrder: 1, siteNumber: 1 })
+          .lean()
+      ),
       // propertyId-only window query (see checkAllSitesAvailability).
       Reservation.find({
         propertyId: oid(propertyId),
@@ -755,10 +792,11 @@ export class ReservationService {
         checkInDate: { $lt: endDate },
         checkOutDate: { $gt: startDate },
       })
-        // Only what the grid renders (the detail modal loads the full reservation by id).
-        // Measured: 830 KB → 714 KB per 14-day response at 300 sites / ~1k stays (−14%).
+        // Only what the grid renders (the detail modal loads the full reservation by id). Site details come
+        // from the sites array; the snapshot is only a fallback label (siteNumber / siteTypeName).
         .select(
-          "confirmationCode siteId guestId checkInDate checkOutDate status numNights adults children siteSnapshot " +
+          "confirmationCode siteId checkInDate checkOutDate status numNights adults children " +
+            "siteSnapshot.siteNumber siteSnapshot.siteTypeName " +
             "guestSnapshot.fullName guestSnapshot.phone guestSnapshot.rvType guestSnapshot.rvLengthFt " +
             "pricing.totalAmount pricing.nightlyRate pricing.paidAmount pricing.balanceDue"
         )

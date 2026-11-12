@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/hooks/useAuth";
 import React, { useState, useEffect } from "react";
 import apiClient from "@/lib/axios/client";
 import { Modal } from "@/components/ui/Modal";
@@ -45,13 +46,14 @@ const AVAILABLE_ICONS = [
 
 export function AddOnModal({ isOpen, addOn, onClose, onSuccess }: AddOnModalProps) {
   const { success, error } = useToast();
+  const { property: authProperty } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>("convenience");
   const [pricingType, setPricingType] = useState<string>("per_stay");
-  const [price, setPrice] = useState<number | string>(10);
+  const [price, setPrice] = useState<number | string>("");
   const [taxable, setTaxable] = useState(true);
   const [isActive, setIsActive] = useState(true);
   const [icon, setIcon] = useState("sparkles");
@@ -62,7 +64,7 @@ export function AddOnModal({ isOpen, addOn, onClose, onSuccess }: AddOnModalProp
       setDescription(addOn.description || "");
       setCategory(addOn.category || "convenience");
       setPricingType(addOn.pricingType || "per_stay");
-      setPrice(addOn.price ?? 10);
+      setPrice(addOn.price ?? "");
       setTaxable(addOn.taxable ?? true);
       setIsActive(addOn.isActive ?? true);
       setIcon(addOn.icon || "sparkles");
@@ -71,7 +73,7 @@ export function AddOnModal({ isOpen, addOn, onClose, onSuccess }: AddOnModalProp
       setDescription("");
       setCategory("convenience");
       setPricingType("per_stay");
-      setPrice(10);
+      setPrice("");
       setTaxable(true);
       setIsActive(true);
       setIcon("sparkles");
@@ -283,7 +285,7 @@ export function AddOnModal({ isOpen, addOn, onClose, onSuccess }: AddOnModalProp
                 className="checkbox checkbox-primary checkbox-xs sm:checkbox-sm rounded"
               />
               <span className="label-text font-bold text-xs text-slate-800">
-                Subject to Tax (7.5%)
+                Subject to Tax ({authProperty?.taxRatePercent ?? 0}%)
               </span>
             </label>
 

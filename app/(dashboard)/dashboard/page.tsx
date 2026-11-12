@@ -1,5 +1,6 @@
 "use client";
 
+import { SetupChecklist } from "@/components/onboarding/SetupChecklist";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import apiClient from "@/lib/axios/client";
@@ -142,6 +143,8 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      <SetupChecklist />
 
       {/* 8 Primary KPI Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3.5">

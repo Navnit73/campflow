@@ -29,6 +29,7 @@ export default async function setup(project: TestProject) {
       JWT_SECRET: "e2e_jwt_secret_that_is_definitely_long_enough",
       CRON_SECRET,
       DISABLE_RATE_LIMIT: "true",
+      NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
       SESSION_CACHE_TTL_MS: "1000",
       RESEND_API_KEY: "",
     },

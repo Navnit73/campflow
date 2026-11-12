@@ -64,66 +64,21 @@ export class AuthService {
         organizationId: organization._id,
         name: propName,
         slug: propSlug,
-        description: `Welcome to ${propName}! A peaceful RV retreat for campers and adventurers.`,
-        address: {
-          street: "100 Pine Valley Way",
-          city: "Mountain View",
-          state: "CO",
-          zip: "80424",
-          country: "USA",
-        },
+        // No invented content: description, rules, amenities, policies and site types are entered
+        // by the owner (Settings / Sites). Previously every new park got fabricated amenities
+        // ("Free High-Speed Wi-Fi", "Dog Park"…), rules, a 7.5% tax rate and three priced site types.
+        description: "",
+        address: { street: "", city: "", state: "", zip: "", country: "USA" },
         phone: input.phone,
         email: input.email.toLowerCase(),
-        timezone: "America/Denver",
+        timezone: input.timezone || "UTC", // the owner's browser timezone, editable in Settings
         currency: "USD",
         checkInTime: "13:00",
         checkOutTime: "11:00",
-        taxRatePercent: 7.5,
-        rules: [
-          "Quiet hours: 10:00 PM to 7:00 AM",
-          "Speed limit: 5 MPH throughout the park",
-          "Pets must be on a leash at all times",
-          "Fires permitted in designated fire rings only",
-        ],
-        amenities: ["Free High-Speed Wi-Fi", "Clean Showers & Bathhouse", "Dog Park", "Camp Store", "Propane Refill"],
+        taxRatePercent: 0,
+        rules: [],
+        amenities: [],
       });
-
-      // 3. Create Default Site Types
-      await SiteType.create([
-        {
-          organizationId: organization._id,
-          propertyId: property._id,
-          name: "50 Amp Full Hookup Pull-Through",
-          category: "rv_site",
-          hookups: { electric: "50A", water: true, sewer: true },
-          maxRigLength: 45,
-          defaultBaseRate: 65,
-          maxOccupancy: 6,
-          description: "Spacious pull-through site with 50/30/20A power, water, sewer, and concrete pad.",
-        },
-        {
-          organizationId: organization._id,
-          propertyId: property._id,
-          name: "30 Amp Full Hookup Back-In",
-          category: "rv_site",
-          hookups: { electric: "30A", water: true, sewer: true },
-          maxRigLength: 35,
-          defaultBaseRate: 52,
-          maxOccupancy: 6,
-          description: "Standard back-in site with 30A power, water, and sewer hookups.",
-        },
-        {
-          organizationId: organization._id,
-          propertyId: property._id,
-          name: "Water & Electric Pop-Up / Tent",
-          category: "tent_site",
-          hookups: { electric: "20A", water: true, sewer: false },
-          maxRigLength: 20,
-          defaultBaseRate: 35,
-          maxOccupancy: 4,
-          description: "Shaded primitive site with 20A electric, potable water, fire pit, and picnic table.",
-        },
-      ]);
 
       // 4. Create Owner User
       const passwordHash = await hashPassword(input.password);
@@ -238,7 +193,7 @@ export class AuthService {
       MailService.sendLoginAlert({
         to: user.email,
         userName: user.name,
-        loginTime: new Date().toLocaleString("en-US", { timeZone: property.timezone || "America/Denver" }),
+        loginTime: new Date().toLocaleString("en-US", { timeZone: property.timezone || "UTC" }),
       }).catch((err) => console.error("[Mail Error] Failed to send login alert:", err));
     }
 

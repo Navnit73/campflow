@@ -20,7 +20,7 @@ const PROPERTY_FIELDS = [
 ] as const;
 
 const SITE_FIELDS = [
-  "_id", "siteNumber", "name", "status", "siteTypeId", "siteTypeSnapshot", "currentBaseRate", "surfaceType",
+  "_id", "siteNumber", "name", "status", "siteTypeId", "siteTypeSnapshot", "currentBaseRate", "weekendBaseRate", "surfaceType",
   "rigType", "petFriendly", "amenities", "photos", "description", "sortOrder", "calculatedPricing",
 ] as const;
 

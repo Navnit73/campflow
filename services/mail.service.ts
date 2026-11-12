@@ -5,6 +5,7 @@ import {
   bookingConfirmationTemplate,
   massAnnouncementTemplate,
   scheduledExportReportTemplate,
+  reservationCancelledTemplate,
 } from "@/lib/mail/templates";
 
 export class MailService {
@@ -30,6 +31,26 @@ export class MailService {
       to: params.to,
       subject: "🔒 Security Alert: New Sign-in to CampFlow",
       html,
+    });
+  }
+
+  /** Cancellation notice to the guest. */
+  static async sendReservationCancelled(params: {
+    to: string;
+    guestName: string;
+    propertyName: string;
+    confirmationCode: string;
+    siteNumber: string;
+    checkInDate: string | Date;
+    checkOutDate: string | Date;
+    paidAmount: number;
+    propertyPhone?: string;
+    propertyEmail?: string;
+  }) {
+    return sendEmail({
+      to: params.to,
+      subject: `Reservation ${params.confirmationCode} cancelled — ${params.propertyName}`,
+      html: reservationCancelledTemplate(params),
     });
   }
 

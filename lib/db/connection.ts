@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { redactMongoUri, serverEnv } from "@/lib/env";
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -11,7 +12,7 @@ declare global {
   var mongooseCache: MongooseCache | undefined;
 }
 
-let cached: MongooseCache = global.mongooseCache || { conn: null, promise: null };
+const cached: MongooseCache = global.mongooseCache || { conn: null, promise: null };
 
 if (!global.mongooseCache) {
   global.mongooseCache = cached;
@@ -28,46 +29,29 @@ export async function connectDB(): Promise<typeof mongoose> {
       maxPoolSize: 10,
     };
 
-    let uri = process.env.MONGODB_URI;
-
     cached.promise = (async () => {
-      // 1. If MONGODB_URI is provided, connect directly to it
-      if (uri) {
+      // Throws a clear, actionable error if MONGODB_URI is missing/invalid (no silent fallback).
+      const env = serverEnv();
+
+      if (env.MONGODB_URI) {
         try {
-          console.log("[MongoDB] Connecting to database URI...");
-          const m = await mongoose.connect(uri, { ...opts, serverSelectionTimeoutMS: 10000 });
-          console.log("[MongoDB] Connected successfully to MongoDB!");
+          const m = await mongoose.connect(env.MONGODB_URI, { ...opts, serverSelectionTimeoutMS: 10000 });
+          const { host, port, name } = m.connection;
+          console.log(`[MongoDB] Connected: ${redactMongoUri(env.MONGODB_URI)} (host ${host}:${port}, db "${name}")`);
           return m;
-        } catch (err: any) {
-          console.error("[MongoDB] Connection to MONGODB_URI failed:", err?.message || err);
+        } catch (err: unknown) {
+          console.error(`[MongoDB] Connection to ${redactMongoUri(env.MONGODB_URI)} failed:`, (err as Error)?.message || err);
           throw err;
         }
       }
 
-      // 2. Only in local development/test (or with explicit opt-in) fall back to an in-memory MongoDB.
-      // A misconfigured staging server must fail loudly rather than silently run on throwaway data.
-      const allowInMemory =
-        process.env.NODE_ENV === "development" ||
-        process.env.NODE_ENV === "test" ||
-        process.env.ALLOW_IN_MEMORY_DB === "true";
-      if (allowInMemory) {
-        try {
-          console.log("[MongoDB] MONGODB_URI not found. Initializing MongoMemoryServer for development...");
-          const { MongoMemoryServer } = await import("mongodb-memory-server");
-          if (!cached.memoryServer) {
-            cached.memoryServer = await MongoMemoryServer.create();
-          }
-          const memUri = cached.memoryServer.getUri();
-          console.log("[MongoDB] Connected to in-memory database instance:", memUri);
-          const m = await mongoose.connect(memUri, opts);
-          return m;
-        } catch (memErr) {
-          console.error("[MongoDB] Failed to start MongoMemoryServer fallback:", memErr);
-          throw memErr;
-        }
+      // Explicit opt-in only (automated tests): a throwaway database that is wiped on restart.
+      console.warn("[MongoDB] ALLOW_IN_MEMORY_DB=true — using a THROWAWAY in-memory database (all data is lost on restart).");
+      const { MongoMemoryServer } = await import("mongodb-memory-server");
+      if (!cached.memoryServer) {
+        cached.memoryServer = await MongoMemoryServer.create();
       }
-
-      throw new Error("MONGODB_URI is not defined (set ALLOW_IN_MEMORY_DB=true to use a throwaway in-memory database).");
+      return mongoose.connect(cached.memoryServer.getUri(), opts);
     })();
   }
 

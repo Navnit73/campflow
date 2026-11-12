@@ -50,7 +50,7 @@ const ICON_MAP: Record<string, any> = {
 export default function PublicBookingPage() {
   const params = useParams();
   const router = useRouter();
-  const slug = (params?.slug as string) || "campflow-rv-resort";
+  const slug = (params?.slug as string) || "";
 
   // Step state: 1 = Search, 2 = Select Site, 3 = Guest Info & Pay
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -199,10 +199,11 @@ export default function PublicBookingPage() {
   const dynamicPricing = selectedSite
     ? calculatePricing({
         nightlyRate: selectedSite.currentBaseRate,
+        weekendRate: selectedSite.weekendBaseRate,
         checkInDate,
         checkOutDate,
         adults: Number(adults || 2),
-        taxRatePercent: property?.taxRatePercent || 7.5,
+        taxRatePercent: property?.taxRatePercent ?? 0, // was `|| 7.5`: a 0%-tax park previewed a phantom 7.5% tax
         addOns: appliedAddOns,
       })
     : null;
@@ -271,12 +272,14 @@ export default function PublicBookingPage() {
             </div>
             <div>
               <h1 className="font-black text-base leading-tight text-slate-900">
-                {property?.name || "CampFlow RV Resort"}
+                {property?.name || ""}
               </h1>
-              <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                <MapPin className="w-3 h-3 text-emerald-600" />
-                {property?.address?.city || "Mountain View"}, {property?.address?.state || "CO"}
-              </p>
+              {[property?.address?.city, property?.address?.state].filter(Boolean).length > 0 && (
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                  <MapPin className="w-3 h-3 text-emerald-600" />
+                  {[property?.address?.city, property?.address?.state].filter(Boolean).join(", ")}
+                </p>
+              )}
             </div>
           </div>
 
@@ -794,14 +797,22 @@ export default function PublicBookingPage() {
                     />
                   </div>
 
-                  {/* Instant Mock Payment Gateway */}
+                  {property?.bookingPolicy && (
+                    <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-1">
+                      <div className="font-bold text-xs uppercase tracking-wider text-slate-800">Cancellation Policy</div>
+                      <p className="text-xs text-slate-600 whitespace-pre-line">{property.bookingPolicy}</p>
+                    </div>
+                  )}
+
+                  {/* No online payment is taken: the reservation is confirmed and the balance is paid at the park. */}
                   <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
                     <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider text-slate-800">
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                      Instant Secure Checkout (Demo Mode)
+                      Pay at the Park
                     </div>
                     <p className="text-xs text-slate-600">
-                      Payment is automatically authorized and confirmed upon submission.
+                      No card is charged online. Your site is reserved now and the balance of{" "}
+                      {formatCurrency(dynamicPricing?.totalAmount || 0)} is due at check-in.
                     </p>
                   </div>
 
@@ -824,7 +835,7 @@ export default function PublicBookingPage() {
                       ) : (
                         <CheckCircle2 className="w-4 h-4" />
                       )}
-                      Confirm & Book Now ({formatCurrency(dynamicPricing?.totalAmount || 0)})
+                      Reserve Site ({formatCurrency(dynamicPricing?.totalAmount || 0)} due at park)
                     </button>
                   </div>
                 </form>
@@ -896,7 +907,7 @@ export default function PublicBookingPage() {
                 )}
 
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Taxes (7.5%):</span>
+                  <span className="text-slate-500">Taxes ({property?.taxRatePercent ?? 0}%):</span>
                   <span className="font-mono">+{formatCurrency(dynamicPricing?.taxAmount || 0)}</span>
                 </div>
 

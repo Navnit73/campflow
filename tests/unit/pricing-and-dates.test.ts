@@ -109,3 +109,29 @@ describe("misc utilities", () => {
     });
   });
 });
+
+describe("weekend rates (audit M3)", () => {
+  // 2026-11-12 is a Thursday → nights: Thu, Fri, Sat, Sun
+  const stay = { nightlyRate: 50, checkInDate: "2026-11-12", checkOutDate: "2026-11-16", taxRatePercent: 0 };
+  it("bills Friday and Saturday nights at the weekend rate", () => {
+    const r = calculatePricing({ ...stay, weekendRate: 80 });
+    expect(r.weekendNights).toBe(2);
+    expect(r.baseSubtotal).toBe(50 * 2 + 80 * 2);
+  });
+  it("is ignored when not configured", () => {
+    expect(calculatePricing({ ...stay }).baseSubtotal).toBe(200);
+    expect(calculatePricing({ ...stay, weekendRate: 0 }).weekendNights).toBe(0);
+  });
+  it("percentage discounts apply to the mixed lodging subtotal", () => {
+    expect(calculatePricing({ ...stay, weekendRate: 80, discountType: "percentage", discountValue: 10 }).discountAmount).toBe(26);
+  });
+});
+
+describe("formatAddress", () => {
+  it("never emits empty separators", async () => {
+    const { formatAddress } = await import("@/lib/utils/format");
+    expect(formatAddress({ street: "", city: "", state: "", zip: "" })).toBe("");
+    expect(formatAddress({ street: "1 Main", city: "Moab", state: "UT", zip: "84532" })).toBe("1 Main, Moab, UT 84532");
+    expect(formatAddress({ city: "Moab", state: "UT" })).toBe("Moab, UT");
+  });
+});

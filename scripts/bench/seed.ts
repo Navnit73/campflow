@@ -8,6 +8,7 @@ import { Reservation } from "@/models/Reservation";
 import { Payment } from "@/models/Payment";
 import { AddOn } from "@/models/AddOn";
 import { User } from "@/models/User";
+import { guestTokens, reservationTokens } from "@/lib/search/tokens";
 
 /** Deterministic PRNG so every benchmark run uses the same dataset. */
 function rng(seed: number) {
@@ -88,6 +89,7 @@ export async function seedTenant(size: SeedSize, seed: number, label: string): P
       rvDetails: { type: "travel_trailer", lengthFt: 20 + Math.floor(rand() * 20), licensePlate: `PL${i}`, state: "", makeModel: "" },
       notes: "", isVip: rand() < 0.05, isBlacklisted: rand() < 0.01, totalStays: 0, totalSpent: 0,
       createdAt: created, updatedAt: created,
+      searchTokens: guestTokens({ firstName: first, lastName: last, email: `${first}.${last}.${i}@${label}.example.com`.toLowerCase(), phone: `555${String(1000000 + i).slice(-7)}`, rvDetails: { licensePlate: `PL${i}` } }),
     };
   });
   for (let i = 0; i < guests.length; i += 5000) await Guest.collection.insertMany(guests.slice(i, i + 5000), { ordered: false });
@@ -128,6 +130,8 @@ export async function seedTenant(size: SeedSize, seed: number, label: string): P
       taxRatePercent: 8, source: pick(["admin", "online_booking", "phone", "walk_in"]), specialRequests: "", notes: "",
       createdAt: created, updatedAt: created,
     });
+    const last = reservations[reservations.length - 1] as Parameters<typeof reservationTokens>[0] & { searchTokens?: string[] };
+    last.searchTokens = reservationTokens(last);
     for (let p = 0; p < size.paymentsPerReservation && paid > 0; p++) {
       payments.push({
         organizationId: org._id, propertyId: property._id, reservationId: _id, guestId: guest._id,

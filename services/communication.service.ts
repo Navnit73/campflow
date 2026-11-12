@@ -160,7 +160,7 @@ export class CommunicationService {
     try {
       result = await MailService.sendMassBroadcast({
         recipients: claimed.recipientEmails,
-        propertyName: property?.name || "CampFlow RV Resort",
+        propertyName: property?.name || "Your campground",
         subject: claimed.subject,
         messageBody: claimed.message,
         priority: claimed.priority,

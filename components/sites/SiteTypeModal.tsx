@@ -24,7 +24,7 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
   const [water, setWater] = useState(true);
   const [sewer, setSewer] = useState(true);
   const [maxRigLength, setMaxRigLength] = useState<number | string>(45);
-  const [defaultBaseRate, setDefaultBaseRate] = useState<number | string>(65);
+  const [defaultBaseRate, setDefaultBaseRate] = useState<number | string>("");
   const [maxOccupancy, setMaxOccupancy] = useState<number | string>(6);
   const [description, setDescription] = useState("");
 
@@ -36,7 +36,7 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
       setWater(typeToEdit.hookups?.water ?? true);
       setSewer(typeToEdit.hookups?.sewer ?? true);
       setMaxRigLength(typeToEdit.maxRigLength ?? 40);
-      setDefaultBaseRate(typeToEdit.defaultBaseRate ?? 50);
+      setDefaultBaseRate(typeToEdit.defaultBaseRate ?? "");
       setMaxOccupancy(typeToEdit.maxOccupancy ?? 6);
       setDescription(typeToEdit.description || "");
     } else {
@@ -46,7 +46,7 @@ export function SiteTypeModal({ isOpen, onClose, onSuccess, typeToEdit }: SiteTy
       setWater(true);
       setSewer(true);
       setMaxRigLength(45);
-      setDefaultBaseRate(65);
+      setDefaultBaseRate("");
       setMaxOccupancy(6);
       setDescription("");
     }

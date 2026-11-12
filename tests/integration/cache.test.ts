@@ -166,3 +166,35 @@ describe("shared rate limiter", () => {
     await expect(rateLimit("test:win", 3, 50)).resolves.toBeUndefined();
   });
 });
+
+describe("tape chart freshness", () => {
+  it("site status changes and new bookings are visible immediately", async () => {
+    const t = await seedTenant();
+    const { SiteService } = await import("@/services/site.service");
+    const d = today();
+    const first = await ReservationService.getTapeChartData(t.orgId, t.propertyId, d, 14);
+    expect(first.sites.find((s: any) => String(s._id) === String(t.site._id))!.status).toBe("available");
+    await SiteService.updateSite(t.orgId, t.propertyId, t.site._id.toString(), { status: "maintenance" });
+    const second = await ReservationService.getTapeChartData(t.orgId, t.propertyId, d, 14);
+    expect(second.sites.find((s: any) => String(s._id) === String(t.site._id))!.status).toBe("maintenance");
+
+    await book(t, { siteId: t.site2._id.toString() });
+    const third = await ReservationService.getTapeChartData(t.orgId, t.propertyId, d, 14);
+    expect(third.reservations).toHaveLength(1);
+    expect(third.reservations[0]).toMatchObject({ siteSnapshot: { siteNumber: "A2" } });
+    expect((third.reservations[0] as any).guestId).toBeUndefined();
+  });
+});
+
+describe("guest token search", () => {
+  it("indexes on create and follows profile edits (findOneAndUpdate path)", async () => {
+    const t = await seedTenant();
+    const { GuestService } = await import("@/services/guest.service");
+    const g = await GuestService.createGuest(t.orgId, t.propertyId, { firstName: "Ava", lastName: "Stone", email: "ava@x.com", phone: "5552223333" } as any);
+    const find = (search: string) => GuestService.listGuests(t.orgId, t.propertyId, { search, page: 1, limit: 20 } as any).then((r) => r.guests.length);
+    expect(await find("sto")).toBe(1);
+    await GuestService.updateGuest(t.orgId, t.propertyId, String(g._id), { lastName: "Rivers" });
+    expect(await find("sto")).toBe(0);
+    expect(await find("riv")).toBe(1);
+  });
+});

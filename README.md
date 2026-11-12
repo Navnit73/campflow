@@ -1,37 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CampFlow — campground & RV park management
 
-## Getting Started
+Next.js 16 + MongoDB (Mongoose 9).
 
-First, run the development server:
+## Quick start (local)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run db:local     # terminal 1 — persistent local MongoDB (replica set, data in ./.data/mongo)
+npm run dev          # terminal 2 — http://localhost:3000
+npm run db:check     # shows which database you're connected to
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The database is chosen **only** by `MONGODB_URI`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Local:** `.env.development` points it at the database from `npm run db:local`.
+- **Your secrets:** go in `.env.local` (git-ignored). Copy `.env.example` to `.env.local` to start one.
+- **Other environments:** dev/staging and production are set on the host.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See **[docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md)** for setup.
 
-## Learn More
+New parks start empty. Register, then enter your address, tax rate and policies in **Settings**, and create site categories and sites in **Sites**.
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | What it does |
+|---|---|
+| `npm run dev` / `build` / `start` | Next.js |
+| `npm run db:local` | Local persistent MongoDB 8.2 (no install needed) |
+| `npm run db:check` | Prints env files loaded, the database URI (redacted), reachability and transactions |
+| `npm test` | Unit and integration tests (real `mongod`) |
+| `npm run test:e2e` | Builds, then runs HTTP workflow tests against `next start` + a replica set |
+| `npm run test:ui` | Builds, then runs Playwright browser journeys |
+| `npm run bench` | Query and latency benchmark on a seeded 80k-reservation dataset |
+| `npm run load` | HTTP load and soak test against the production build |
+| `npm run typecheck` / `lint` | TypeScript and ESLint |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Maintenance scripts:** `scripts/sync-indexes.ts`, `scripts/migrate-dedupe-guests.ts`, `scripts/migrate-search-tokens.ts`. See `docs/audit/FINAL-REPORT.md` for the deployment checklist.
 
-## Deploy on Vercel
+## Docs
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# campflow
+- `docs/ENVIRONMENTS.md`: environments, database selection, env variables
+- `docs/audit/`: audit, fix logs, performance and test reports

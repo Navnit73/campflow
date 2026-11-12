@@ -114,7 +114,8 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
       {/* Quick Booking link pinned at bottom of sidebar */}
       <div className="pt-3 border-t border-slate-100">
         <Link
-          href={`/book/${property?.slug || "campflow-rv-resort"}`}
+          href={property?.slug ? `/book/${property.slug}` : "#"}
+          aria-disabled={!property?.slug}
           target="_blank"
           className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 transition-colors w-full"
         >

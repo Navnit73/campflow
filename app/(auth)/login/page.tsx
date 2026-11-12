@@ -30,11 +30,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoFill = () => {
-    setEmail("admin@campflow.com");
-    setPassword("password123");
-  };
-
   return (
     <div className="bg-white/90 backdrop-blur-xl p-6 sm:p-8 space-y-6 shadow-2xl border border-white/30 rounded-2xl">
       <div className="text-center space-y-1.5">
@@ -55,7 +50,7 @@ export default function LoginPage() {
             <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="email"
-              placeholder="admin@campflow.com"
+              placeholder="you@yourpark.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="input input-bordered input-md w-full pl-10 text-sm font-medium bg-white/70 focus:bg-white focus:border-emerald-600"

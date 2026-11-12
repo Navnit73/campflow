@@ -28,6 +28,8 @@ export interface IProperty extends Document {
   taxRatePercent: number;
   bookingPolicy?: string;
   quietHours?: string;
+  /** Set when the owner first saves Settings (confirms tax rate and check-in/out times). */
+  settingsConfirmedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,10 +58,10 @@ const PropertySchema = new Schema<IProperty>(
       default: "",
     },
     address: {
-      street: { type: String, required: true },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      zip: { type: String, required: true },
+      street: { type: String, default: "" },
+      city: { type: String, default: "" },
+      state: { type: String, default: "" },
+      zip: { type: String, default: "" },
       country: { type: String, default: "USA" },
     },
     coordinates: {
@@ -76,7 +78,7 @@ const PropertySchema = new Schema<IProperty>(
     },
     timezone: {
       type: String,
-      default: "America/New_York",
+      default: "UTC",
     },
     currency: {
       type: String,
@@ -100,11 +102,14 @@ const PropertySchema = new Schema<IProperty>(
     },
     bookingPolicy: {
       type: String,
-      default: "Standard 48-hour cancellation policy applies.",
+      default: "", // the park's own policy — never an invented one
+    },
+    settingsConfirmedAt: {
+      type: Date,
     },
     quietHours: {
       type: String,
-      default: "10:00 PM - 7:00 AM",
+      default: "",
     },
   },
   {

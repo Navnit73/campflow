@@ -63,10 +63,10 @@ export default function HomePage() {
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
-            href="/book/campflow-rv-resort"
+            href="/register"
             className="btn btn-outline btn-md gap-2 font-bold text-sm text-slate-700 rounded-md"
           >
-            View Online Booking Engine ↗
+            Register Your Park
           </Link>
         </div>
 

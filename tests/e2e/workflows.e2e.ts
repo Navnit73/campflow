@@ -47,8 +47,14 @@ afterAll(async () => mongo?.close());
 
 describe("site setup (owner)", () => {
   it("creates sites and partially updates one without clobbering other fields", async () => {
-    const types = (await owner.get("/api/sites/types")).json.data;
-    const big = types.find((t: { maxRigLength: number }) => t.maxRigLength >= 40);
+    // New parks start with no site types (nothing invented at registration).
+    expect((await owner.get("/api/sites/types")).json.data).toHaveLength(0);
+    const created = await owner.post("/api/sites/types", {
+      name: "50 Amp Full Hookup", category: "rv_site", hookups: { electric: "50A", water: true, sewer: true },
+      maxRigLength: 45, defaultBaseRate: 60, maxOccupancy: 6,
+    });
+    expect(created.status).toBe(201);
+    const big = created.json.data;
     const a = await owner.post("/api/sites", { siteNumber: "A1", siteTypeId: big._id, notes: "near the lake", status: "maintenance" });
     const b = await owner.post("/api/sites", { siteNumber: "B1", siteTypeId: big._id });
     expect([a.status, b.status]).toEqual([201, 201]);
@@ -140,7 +146,10 @@ describe("concurrency over HTTP", () => {
 
 describe("public booking → confirmation → dashboard", () => {
   it("books online at catalog prices and the (cached) dashboard reflects it immediately", async () => {
-    await owner.post("/api/addons/seed");
+    // Starter list requires owner-entered prices (templates carry none).
+    expect((await owner.post("/api/addons/seed")).status).toBe(422);
+    const seeded = await owner.post("/api/addons/seed", { items: [{ key: "firewood", price: 9 }, { key: "pet-fee", price: 15 }] });
+    expect(seeded.json.data).toEqual({ created: 2, skipped: 0 });
     const before = (await owner.get("/api/dashboard")).json.data.stats;
 
     const guestBrowser = new Client();

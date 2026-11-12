@@ -34,6 +34,7 @@ export default function RegisterPage() {
         email,
         phone,
         password,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
       success("Park registered successfully! Welcome to CampFlow.");
       router.push("/dashboard");

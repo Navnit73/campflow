@@ -21,7 +21,7 @@ import {
 
 export default function ConfirmationPage() {
   const params = useParams();
-  const slug = (params?.slug as string) || "campflow-rv-resort";
+  const slug = (params?.slug as string) || "";
   const code = (params?.code as string) || "";
 
   const [data, setData] = useState<any | null>(null);
@@ -226,10 +226,18 @@ export default function ConfirmationPage() {
             Park Location & Important Information
           </div>
           <p>
-            {property?.name} • {property?.address?.street || "100 Pine Creek Rd"}, {property?.address?.city || "Mountain View"}, {property?.address?.state || "CO"} {property?.address?.zip || "80401"}
+            {/* Only the park's real address — never a placeholder. */}
+            {[
+              property?.name,
+              [property?.address?.street, property?.address?.city, [property?.address?.state, property?.address?.zip].filter(Boolean).join(" ")]
+                .filter(Boolean)
+                .join(", "),
+            ]
+              .filter(Boolean)
+              .join(" • ")}
           </p>
           <div className="pt-1 text-slate-500 space-y-0.5">
-            <p>• Quiet hours are strictly enforced between 10:00 PM and 7:00 AM.</p>
+            <p>• Quiet hours are strictly enforced{property?.quietHours ? `: ${property.quietHours}` : ""}.</p>
             <p>• Please keep pets on a 6-foot leash at all times.</p>
             <p>• Speed limit within campground is 5 MPH.</p>
           </div>

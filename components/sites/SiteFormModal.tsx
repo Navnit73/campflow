@@ -30,14 +30,14 @@ export function SiteFormModal({
   const [name, setName] = useState("");
   const [siteTypeId, setSiteTypeId] = useState("");
   const [status, setStatus] = useState<string>("available");
-  const [currentBaseRate, setCurrentBaseRate] = useState<number | string>(55);
+  const [currentBaseRate, setCurrentBaseRate] = useState<number | string>("");
   const [weekendBaseRate, setWeekendBaseRate] = useState<number | string>("");
   const [surfaceType, setSurfaceType] = useState<string>("gravel");
   const [rigType, setRigType] = useState<string>("back_in");
   const [petFriendly, setPetFriendly] = useState(true);
   const [photoUrl, setPhotoUrl] = useState("");
   const [description, setDescription] = useState("");
-  const [amenitiesStr, setAmenitiesStr] = useState("Picnic Table, Fire Pit, Free Wi-Fi");
+  const [amenitiesStr, setAmenitiesStr] = useState("");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export function SiteFormModal({
       setName(siteToEdit.name || "");
       setSiteTypeId(siteToEdit.siteTypeId?._id || siteToEdit.siteTypeId || "");
       setStatus(siteToEdit.status || "available");
-      setCurrentBaseRate(siteToEdit.currentBaseRate || 55);
+      setCurrentBaseRate(siteToEdit.currentBaseRate ?? ""); // `|| 55` showed a $0 rate as $55
       setWeekendBaseRate(siteToEdit.weekendBaseRate || "");
       setSurfaceType(siteToEdit.surfaceType || "gravel");
       setRigType(siteToEdit.rigType || "back_in");
@@ -60,14 +60,14 @@ export function SiteFormModal({
       setName("");
       setSiteTypeId(siteTypes.length > 0 ? siteTypes[0]._id : "");
       setStatus("available");
-      setCurrentBaseRate(siteTypes.length > 0 ? siteTypes[0].defaultBaseRate : 55);
+      setCurrentBaseRate(siteTypes.length > 0 ? siteTypes[0].defaultBaseRate : "");
       setWeekendBaseRate("");
       setSurfaceType("gravel");
       setRigType("back_in");
       setPetFriendly(true);
       setPhotoUrl("");
       setDescription("");
-      setAmenitiesStr("Picnic Table, Fire Pit, Free Wi-Fi");
+      setAmenitiesStr("");
       setNotes("");
     }
   }, [siteToEdit, siteTypes, isOpen]);

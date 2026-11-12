@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/db/connection";
 import { invalidateProperty } from "@/lib/cache";
 import { toDotPaths } from "@/lib/utils/flatten";
 import { searchRegex } from "@/lib/utils/regex";
+import { tokenFilter } from "@/lib/search/tokens";
 import { paginate, SEARCH_MAX_TIME_MS } from "@/lib/utils/pagination";
 import { ConflictError } from "@/lib/utils/errors";
 
@@ -23,14 +24,25 @@ export class GuestService {
     };
 
     if (options.search && options.search.trim()) {
-      const rx = searchRegex(options.search);
-      query.$or = [
-        { firstName: rx },
-        { lastName: rx },
-        { email: rx },
-        { phone: rx },
-        { "rvDetails.licensePlate": rx },
-      ];
+      const tokens = tokenFilter(options.search);
+      const legacy = await Guest.exists({
+        organizationId: new mongoose.Types.ObjectId(organizationId),
+        propertyId: new mongoose.Types.ObjectId(propertyId),
+        searchTokens: null,
+      });
+      if (tokens && !legacy) {
+        Object.assign(query, tokens);
+      } else {
+        // Pre-token records: unindexed substring scan until the backfill migration has run.
+        const rx = searchRegex(options.search);
+        query.$or = [
+          { firstName: rx },
+          { lastName: rx },
+          { email: rx },
+          { phone: rx },
+          { "rvDetails.licensePlate": rx },
+        ];
+      }
     }
 
     const isSearch = Boolean(options.search && options.search.trim());

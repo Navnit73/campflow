@@ -346,3 +346,31 @@ Details are in `PHASE-4-7-CACHING-TESTING.md`.
 - `EXPORT_RETENTION_DAYS`
 
 **New npm scripts:** `test:e2e`, `bench`, `load`.
+
+---
+
+# Round 4 (2026-11-11): Phase 9 and the remaining open items
+
+See **`FINAL-REPORT.md`** for the final verification and before/after numbers.
+
+## Open items closed
+
+| Item | Fix |
+|---|---|
+| Search with no match scanned the property | Indexed search tokens: 123 → 0.47 ms; a common term 19 → 1.1 ms; guest search 25 → 0.9 ms. Legacy fallback, plus a backfill script |
+| Tape-chart throughput | Site rows cached and the payload trimmed (594 KB, 158 req/s) |
+| No browser UI tests | Playwright suite added (6 journeys) |
+
+## Bugs found and fixed while doing the above
+
+- Settings page never saved (new `/api/property`).
+- Fake registration address and placeholder addresses on public pages.
+- Misleading "payment authorized" copy on the booking page.
+- 7.5% tax hardcoded in three price previews.
+- Weekend rates ignored.
+- Occupancy not enforced for public bookings.
+- No cancellation email.
+- Hardcoded quiet hours.
+- ", ," in booking emails.
+
+**Tests: 152 total, all passing.**

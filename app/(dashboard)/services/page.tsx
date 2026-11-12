@@ -1,4 +1,7 @@
 "use client";
+import { TemplatePickerModal } from "@/components/onboarding/TemplatePickerModal";
+import { ADDON_TEMPLATES } from "@/lib/onboarding/templates";
+
 
 import React, { useState, useEffect } from "react";
 import apiClient from "@/lib/axios/client";
@@ -41,6 +44,8 @@ const ICON_MAP: Record<string, any> = {
   shield: Shield,
   map: MapPin,
 };
+
+const PRICING_LABELS = { per_stay: "per stay", per_night: "per night", per_unit: "per item", per_person: "per person" } as const;
 
 export default function ServicesPage() {
   const { success, error, info } = useToast();
@@ -119,17 +124,9 @@ export default function ServicesPage() {
     }
   };
 
-  const handleSeedDefaults = async () => {
-    try {
-      const res = await apiClient.post("/api/addons/seed");
-      if (res.data?.success) {
-        success(res.data.message || "Standard services created!");
-        fetchAddOns();
-      }
-    } catch (err: any) {
-      error(err?.message || "Failed to initialize sample services");
-    }
-  };
+  // Starter list: the owner picks items and enters their own prices (no example prices are saved).
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const handleSeedDefaults = () => setIsTemplatesOpen(true);
 
   // Metrics
   const totalCount = addOns.length;
@@ -178,12 +175,12 @@ export default function ServicesPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {addOns.length === 0 && !loading && (
+          {!loading && (
             <button
               onClick={handleSeedDefaults}
               className="btn btn-outline btn-sm font-bold text-xs rounded-md bg-white hover:bg-slate-50"
             >
-              Seed Standard Services
+              Starter List
             </button>
           )}
 
@@ -311,13 +308,13 @@ export default function ServicesPage() {
           </div>
           <h3 className="font-bold text-slate-900 text-base">No services found</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Create custom add-ons or click below to populate standard campground items like Firewood, Propane, and Cart Rentals.
+            Create your own services, or pick from a starter list (firewood, pet fee, rentals…) and set your own prices.
           </p>
           <button
             onClick={handleSeedDefaults}
             className="btn btn-primary btn-sm font-bold rounded-md mt-2"
           >
-            Seed Standard Services
+            Choose from Starter List
           </button>
         </div>
       ) : (
@@ -419,6 +416,22 @@ export default function ServicesPage() {
           setEditingAddOn(null);
         }}
         onSuccess={fetchAddOns}
+      />
+      <TemplatePickerModal
+        isOpen={isTemplatesOpen}
+        onClose={() => setIsTemplatesOpen(false)}
+        onDone={fetchAddOns}
+        title="Add services from the starter list"
+        subtitle="Pick what you offer and set your own prices"
+        priceLabel="Price"
+        endpoint="/api/addons/seed"
+        existingNames={addOns.map((a) => a.name)}
+        items={ADDON_TEMPLATES.map((t) => ({
+          key: t.key,
+          name: t.name,
+          description: t.description,
+          meta: `${PRICING_LABELS[t.pricingType]} · ${t.taxable ? "taxable" : "not taxable"}`,
+        }))}
       />
     </div>
   );

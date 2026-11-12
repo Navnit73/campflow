@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit",
     "bench": "tsx scripts/bench/run.ts",
     "test:e2e": "next build && vitest run -c vitest.e2e.config.ts",
-    "load": "tsx scripts/load/run.ts"
+    "load": "tsx scripts/load/run.ts",
+    "test:ui": "next build && playwright test",
+    "db:local": "tsx scripts/db-local.ts",
+    "db:check": "tsx scripts/db-check.ts"
   },
   "dependencies": {
     "axios": "^1.19.0",
@@ -32,6 +35,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4",
     "@types/autocannon": "^7.12.7",
     "@types/bcryptjs": "^2.4.6",

@@ -5,6 +5,7 @@ import {
   ReservationStatus,
   RESERVATION_STATUSES,
 } from "@/lib/constants";
+import { reservationTokens } from "@/lib/search/tokens";
 
 export interface IReservation extends Document {
   _id: mongoose.Types.ObjectId;
@@ -23,6 +24,8 @@ export interface IReservation extends Document {
     };
     rigType: string;
     baseRate: number;
+    /** Weekend (Fri/Sat) nightly rate frozen at booking time, if the site had one. */
+    weekendRate?: number;
   };
   guestSnapshot: {
     fullName: string;
@@ -63,6 +66,8 @@ export interface IReservation extends Document {
   discountSnapshot?: { type: "percentage" | "fixed_amount"; value: number };
   /** Property tax rate frozen at booking time. */
   taxRatePercent?: number;
+  /** Normalized word tokens for indexed prefix search (see lib/search/tokens.ts). */
+  searchTokens?: string[];
   source: ReservationSource;
   specialRequests?: string;
   checkInTimeActual?: Date;
@@ -110,6 +115,7 @@ const ReservationSchema = new Schema<IReservation>(
       },
       rigType: { type: String, default: "back_in" },
       baseRate: { type: Number, required: true },
+      weekendRate: { type: Number },
     },
     guestSnapshot: {
       fullName: { type: String, required: true },
@@ -194,6 +200,11 @@ const ReservationSchema = new Schema<IReservation>(
       min: 0,
       max: 100,
     },
+    searchTokens: {
+      type: [String],
+      default: undefined,
+      select: false,
+    },
     source: {
       type: String,
       enum: RESERVATION_SOURCES,
@@ -240,6 +251,16 @@ ReservationSchema.index({ propertyId: 1, createdAt: -1 });
 // Reservation list: tenant filter + sort fully in-index; list count answered from the index alone.
 ReservationSchema.index({ organizationId: 1, propertyId: 1, checkInDate: -1, createdAt: -1 });
 
+
+// Indexed word-prefix search within a property (multikey).
+ReservationSchema.index({ propertyId: 1, searchTokens: 1 });
+
+// Keep search tokens in sync on create and on document saves that touch searchable fields.
+ReservationSchema.pre("save", function () {
+  if (this.isNew || this.isModified("guestSnapshot") || this.isModified("siteSnapshot") || this.isModified("confirmationCode")) {
+    this.searchTokens = reservationTokens(this);
+  }
+});
 
 export const Reservation: Model<IReservation> =
   mongoose.models.Reservation || mongoose.model<IReservation>("Reservation", ReservationSchema);

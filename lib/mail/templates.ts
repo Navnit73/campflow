@@ -1,4 +1,5 @@
 import { formatCurrency, formatDate } from "@/lib/utils/format";
+import { appUrl } from "@/lib/env";
 
 /** Escapes text for safe interpolation into HTML (element content and quoted attributes). */
 export function escapeHtml(value: unknown): string {
@@ -110,11 +111,11 @@ export function loginNotificationTemplate(data: {
             </p>
 
             <div style="text-align:center;margin-top:24px;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard" style="${BUTTON_STYLES}">Go to Front Desk Dashboard</a>
+              <a href="${appUrl()}/dashboard" style="${BUTTON_STYLES}">Go to Front Desk Dashboard</a>
             </div>
           </div>
           <div style="${FOOTER_STYLES}">
-            <p style="margin:0;">CampFlow RV Resort & Campground Management System</p>
+            <p style="margin:0;">CampFlow • Campground Management</p>
           </div>
         </div>
       </body>
@@ -158,7 +159,7 @@ export function welcomeRegistrationTemplate(data: {
             </div>
 
             <div style="text-align:center;margin-top:24px;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard" style="${BUTTON_STYLES}">Open Front Desk Portal</a>
+              <a href="${appUrl()}/dashboard" style="${BUTTON_STYLES}">Open Front Desk Portal</a>
             </div>
           </div>
           <div style="${FOOTER_STYLES}">
@@ -208,9 +209,8 @@ export function bookingConfirmationTemplate(data: {
   data = escapeDeep(data);
   const checkInFormatted = formatDate(data.checkInDate);
   const checkOutFormatted = formatDate(data.checkOutDate);
-  const passUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/book/${
-    data.slug || "campflow-rv-resort"
-  }/confirmation/${data.confirmationCode}`;
+  // Link only when the park's slug is known (never a made-up park URL).
+  const passUrl = data.slug ? `${appUrl()}/book/${data.slug}/confirmation/${data.confirmationCode}` : "";
 
   return `
     <!DOCTYPE html>
@@ -320,9 +320,13 @@ export function bookingConfirmationTemplate(data: {
               </table>
             </div>
 
-            <div style="text-align:center;margin-top:24px;">
+            ${
+              passUrl
+                ? `<div style="text-align:center;margin-top:24px;">
               <a href="${passUrl}" style="${BUTTON_STYLES}">View & Print Reservation Pass</a>
-            </div>
+            </div>`
+                : ""
+            }
 
             ${
               data.propertyAddress
@@ -510,3 +514,50 @@ export function scheduledExportReportTemplate(data: {
   `;
 }
 
+
+/**
+ * Reservation cancellation notice (audit L3: guests previously received nothing on cancellation).
+ */
+export function reservationCancelledTemplate(data: {
+  guestName: string;
+  propertyName: string;
+  confirmationCode: string;
+  siteNumber: string;
+  checkInDate: string | Date;
+  checkOutDate: string | Date;
+  paidAmount: number;
+  propertyPhone?: string;
+  propertyEmail?: string;
+}) {
+  data = escapeDeep(data);
+  const contact = [data.propertyPhone, data.propertyEmail].filter(Boolean).join(" • ");
+  return `
+    <!DOCTYPE html>
+    <html>
+      <body style="${BASE_STYLES}">
+        <div style="${CONTAINER_STYLES}">
+          <div style="${HEADER_STYLES}">
+            <h1 style="margin:0;font-size:22px;font-weight:800;">${data.propertyName}</h1>
+            <p style="margin:4px 0 0;font-size:13px;opacity:0.9;">Reservation cancelled</p>
+          </div>
+          <div style="padding: 28px 30px;">
+            <p style="font-size:14px;color:#334155;">Hello <strong>${data.guestName}</strong>,</p>
+            <p style="font-size:14px;color:#334155;">
+              Your reservation <strong>${data.confirmationCode}</strong> for Site ${data.siteNumber}
+              (${formatDate(data.checkInDate)} → ${formatDate(data.checkOutDate)}) has been cancelled.
+            </p>
+            ${
+              data.paidAmount > 0
+                ? `<p style="font-size:14px;color:#334155;">Payments on file: <strong>${formatCurrency(data.paidAmount)}</strong>. Any refund is issued according to the park's cancellation policy — the front desk will confirm.</p>`
+                : ""
+            }
+            ${contact ? `<p style="font-size:13px;color:#64748b;">Questions? Contact us: ${contact}</p>` : ""}
+          </div>
+          <div style="${FOOTER_STYLES}">
+            <p style="margin:0;">${data.propertyName}</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}

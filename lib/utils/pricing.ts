@@ -1,4 +1,4 @@
-import { diffDays } from "./date";
+import { diffDays, parseDateOnly } from "./date";
 
 export interface AddOnPricingInput {
   addOnId?: string;
@@ -21,6 +21,8 @@ export interface CalculatedAddOnItem {
 
 export interface CalculatePricingParams {
   nightlyRate: number;
+  /** Rate for Friday and Saturday nights (site.weekendBaseRate). Ignored when not set / not > 0. */
+  weekendRate?: number | null;
   checkInDate: Date | string;
   checkOutDate: Date | string;
   adults?: number;
@@ -34,6 +36,8 @@ export interface CalculatePricingParams {
 export interface PricingResult {
   numNights: number;
   nightlyRate: number;
+  /** Nights billed at the weekend rate (Fri/Sat). */
+  weekendNights: number;
   baseSubtotal: number;
   addOnsSubtotal: number;
   calculatedAddOns: CalculatedAddOnItem[];
@@ -57,7 +61,17 @@ export function calculatePricing(params: CalculatePricingParams): PricingResult 
     numNights = 1;
   }
 
-  const baseSubtotal = Number((nightlyRate * numNights).toFixed(2));
+  // Friday and Saturday nights use the weekend rate when one is configured (it used to be ignored).
+  const weekendRate = Math.max(0, Number(params.weekendRate) || 0);
+  let weekendNights = 0;
+  if (weekendRate > 0) {
+    const start = parseDateOnly(params.checkInDate);
+    for (let i = 0; i < numNights; i++) {
+      const dow = new Date(start.getTime() + i * 86_400_000).getUTCDay();
+      if (dow === 5 || dow === 6) weekendNights++;
+    }
+  }
+  const baseSubtotal = Number((nightlyRate * (numNights - weekendNights) + weekendRate * weekendNights).toFixed(2));
 
   // Calculate Add-Ons
   let addOnsSubtotal = 0;
@@ -133,6 +147,7 @@ export function calculatePricing(params: CalculatePricingParams): PricingResult 
   return {
     numNights,
     nightlyRate,
+    weekendNights,
     baseSubtotal,
     addOnsSubtotal,
     calculatedAddOns,

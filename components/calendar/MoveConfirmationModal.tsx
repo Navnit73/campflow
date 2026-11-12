@@ -45,7 +45,7 @@ export function MoveConfirmationModal({
   } = dropData;
 
   const prevNights = reservation.numNights || 1;
-  const prevRate = previousSite?.currentBaseRate || reservation.pricing?.nightlyRate || 50;
+  const prevRate = previousSite?.currentBaseRate ?? reservation.pricing?.nightlyRate ?? 0;
   const newRate = targetSite?.currentBaseRate || prevRate;
 
   const prevSubtotal = prevRate * prevNights;

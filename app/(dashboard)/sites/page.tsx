@@ -1,5 +1,7 @@
 "use client";
 
+import { TemplatePickerModal } from "@/components/onboarding/TemplatePickerModal";
+import { SITE_CATEGORY_TEMPLATES } from "@/lib/onboarding/templates";
 import React, { useState, useEffect } from "react";
 import apiClient from "@/lib/axios/client";
 import { SiteStatusBadge } from "@/components/ui/Badge";
@@ -42,6 +44,7 @@ export default function SitesPage() {
   // Modals
   const [isSiteModalOpen, setIsSiteModalOpen] = useState(false);
   const [siteToEdit, setSiteToEdit] = useState<any | null>(null);
+  const [isCategoryTemplatesOpen, setIsCategoryTemplatesOpen] = useState(false);
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [typeToEdit, setTypeToEdit] = useState<any | null>(null);
 
@@ -152,6 +155,8 @@ export default function SitesPage() {
               setSiteToEdit(null);
               setIsSiteModalOpen(true);
             }}
+            disabled={!loading && siteTypes.length === 0}
+            title={siteTypes.length === 0 ? "Create a site category first" : undefined}
             className="btn btn-primary btn-sm gap-1.5 font-bold rounded-md"
           >
             <PlusCircle className="w-4 h-4" />
@@ -175,6 +180,32 @@ export default function SitesPage() {
             Site Categories ({siteTypes.length})
           </h3>
         </div>
+        {!loading && siteTypes.length === 0 && (
+          <div className="surface-card p-4 rounded-lg border border-dashed border-slate-300 text-sm text-slate-600 space-y-2">
+            <p className="font-semibold text-slate-800">Start by creating your first site category</p>
+            <p className="text-xs">
+              A category defines hookups, maximum rig length, occupancy and the default nightly rate for a group of sites
+              (for example &ldquo;50 Amp Full Hookup Pull-Through&rdquo;). New parks start empty — nothing is pre-filled.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setIsCategoryTemplatesOpen(true)}
+                className="btn btn-primary btn-sm font-bold rounded-md"
+              >
+                Choose from Templates
+              </button>
+              <button
+                onClick={() => {
+                  setTypeToEdit(null);
+                  setIsTypeModalOpen(true);
+                }}
+                className="btn btn-outline btn-sm font-bold rounded-md"
+              >
+                Create Site Category
+              </button>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {siteTypes.map((st) => (
             <div
@@ -583,6 +614,30 @@ export default function SitesPage() {
         onClose={() => setSelectedResId(null)}
         onUpdated={loadData}
         onOpenPayment={() => {}}
+      />
+      <TemplatePickerModal
+        isOpen={isCategoryTemplatesOpen}
+        onClose={() => setIsCategoryTemplatesOpen(false)}
+        onDone={loadData}
+        title="Add site categories from templates"
+        subtitle="Pick the kinds of sites you have and set your nightly rates"
+        priceLabel="Nightly rate"
+        endpoint="/api/sites/types/templates"
+        existingNames={siteTypes.map((t) => t.name)}
+        items={SITE_CATEGORY_TEMPLATES.map((t) => ({
+          key: t.key,
+          name: t.name,
+          description: t.description,
+          meta: [
+            t.hookups.electric !== "none" ? `${t.hookups.electric} power` : "no power",
+            t.hookups.water ? "water" : null,
+            t.hookups.sewer ? "sewer" : null,
+            t.maxRigLength ? `rigs up to ${t.maxRigLength} ft` : null,
+            `sleeps ${t.maxOccupancy}`,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        }))}
       />
     </div>
   );

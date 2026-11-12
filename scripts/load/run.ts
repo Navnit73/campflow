@@ -66,7 +66,7 @@ async function main() {
   console.error("seeded");
 
   const server = spawn("npx", ["next", "start", "-p", String(PORT)], {
-    env: { ...process.env, NODE_ENV: "production", MONGODB_URI: uri, JWT_SECRET: "load_test_jwt_secret_long_enough_123456", DISABLE_RATE_LIMIT: "true", RESEND_API_KEY: "" },
+    env: { ...process.env, NODE_ENV: "production", MONGODB_URI: uri, JWT_SECRET: "load_test_jwt_secret_long_enough_123456", DISABLE_RATE_LIMIT: "true", RESEND_API_KEY: "", NEXT_PUBLIC_APP_URL: BASE },
     stdio: "ignore",
   });
   for (let i = 0; i < 120; i++) {

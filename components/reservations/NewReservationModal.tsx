@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/hooks/useAuth";
 import React, { useState, useEffect } from "react";
 import apiClient from "@/lib/axios/client";
 import { Modal } from "@/components/ui/Modal";
@@ -217,12 +218,15 @@ export function NewReservationModal({
   const isSiteAvailable = availabilityMap[siteId]?.isAvailable ?? true;
   const conflictReason = availabilityMap[siteId]?.conflictReason;
 
+  const { property: authProperty } = useAuth();
   const pricing = calculatePricing({
-    nightlyRate: selectedSite?.currentBaseRate || 50,
+    nightlyRate: selectedSite?.currentBaseRate ?? 0, // no invented rate before a site is chosen
     checkInDate,
     checkOutDate: checkOutDate > checkInDate ? checkOutDate : checkInDate,
     adults: Number(adults) || 2,
-    taxRatePercent: 7.5,
+    weekendRate: selectedSite?.weekendBaseRate,
+    // Park's real tax rate (was hardcoded 7.5% → previews disagreed with the server total).
+    taxRatePercent: authProperty?.taxRatePercent ?? 0,
     addOns: appliedAddOns,
   });
 

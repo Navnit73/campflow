@@ -183,6 +183,9 @@ async function main() {
 
   await ex("reservations.list page1", Reservation.find({ organizationId: O, propertyId: P }).sort({ checkInDate: -1, createdAt: -1 }).limit(20));
   await ex("reservations.list search", Reservation.find({ organizationId: O, propertyId: P, $or: [{ confirmationCode: /smith/i }, { "guestSnapshot.fullName": /smith/i }, { "guestSnapshot.email": /smith/i }, { "guestSnapshot.phone": /smith/i }, { "siteSnapshot.siteNumber": /smith/i }] }).sort({ checkInDate: -1, createdAt: -1 }).limit(20));
+  await ex("search tokens: rare term (no match)", Reservation.find({ propertyId: P, searchTokens: { $regex: "^zzqxj" } }).sort({ checkInDate: -1, createdAt: -1 }).limit(20));
+  await ex("search tokens: common term 'smith'", Reservation.find({ organizationId: O, propertyId: P, searchTokens: { $regex: "^smith" } }).sort({ checkInDate: -1, createdAt: -1 }).limit(20));
+  await ex("search legacy check (searchTokens: null)", Reservation.find({ propertyId: P, searchTokens: null }).limit(1));
   await ex("reservations.count (list total)", Reservation.aggregate([{ $match: { organizationId: O, propertyId: P } }, { $count: "n" }]) as never);
   await ex("tape-chart reservations", Reservation.find({ propertyId: P, status: { $in: ["confirmed", "checked_in", "pending", "checked_out"] }, checkInDate: { $lt: in14 }, checkOutDate: { $gt: todayD } }));
   await ex("availability overlap (all sites)", Reservation.find({ propertyId: P, status: { $in: ["pending", "confirmed", "checked_in"] }, checkInDate: { $lt: in14 }, checkOutDate: { $gt: todayD } }));

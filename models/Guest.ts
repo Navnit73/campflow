@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { RvType, RV_TYPES } from "@/lib/constants";
+import { guestTokens } from "@/lib/search/tokens";
 
 export interface IGuest extends Document {
   _id: mongoose.Types.ObjectId;
@@ -28,6 +29,8 @@ export interface IGuest extends Document {
   isBlacklisted: boolean;
   totalStays: number;
   totalSpent: number;
+  /** Normalized word tokens for indexed prefix search (see lib/search/tokens.ts). */
+  searchTokens?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -107,6 +110,11 @@ const GuestSchema = new Schema<IGuest>(
       type: Number,
       default: 0,
     },
+    searchTokens: {
+      type: [String],
+      default: undefined,
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -120,6 +128,26 @@ GuestSchema.index({ organizationId: 1, email: 1 }, { unique: true });
 GuestSchema.index({ organizationId: 1, propertyId: 1, updatedAt: -1 });
 // Property-scoped counts/distinct and exports sorted by creation.
 GuestSchema.index({ propertyId: 1, createdAt: -1 });
+
+// Indexed word-prefix search within a property (multikey).
+GuestSchema.index({ organizationId: 1, propertyId: 1, searchTokens: 1 });
+
+GuestSchema.pre("save", function () {
+  this.searchTokens = guestTokens(this);
+});
+
+// findOneAndUpdate paths (profile edits, staff booking upsert) bypass save(): recompute from the
+// stored document afterwards so tokens never drift from the profile.
+GuestSchema.post("findOneAndUpdate", async function (doc: (Partial<IGuest> & { _id?: unknown }) | null) {
+  if (!doc?._id) return;
+  const model = this.model as Model<IGuest>;
+  const opts = this.getOptions() as { returnDocument?: string; new?: boolean; projection?: unknown };
+  // If the update returned the full post-update document, use it; otherwise re-read (one extra query).
+  const isAfter = opts.returnDocument === "after" || opts.new === true;
+  const complete = isAfter && !opts.projection && doc.firstName !== undefined && doc.email !== undefined;
+  const source = complete ? doc : await model.findById(doc._id).select("firstName lastName email phone rvDetails").lean();
+  if (source) await model.updateOne({ _id: doc._id }, { $set: { searchTokens: guestTokens(source) } });
+});
 
 export const Guest: Model<IGuest> =
   mongoose.models.Guest || mongoose.model<IGuest>("Guest", GuestSchema);

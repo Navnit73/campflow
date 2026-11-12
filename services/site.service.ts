@@ -4,6 +4,9 @@ import { SiteType, ISiteType } from "@/models/SiteType";
 import { Reservation } from "@/models/Reservation";
 import { CreateSiteInput, UpdateSiteInput, CreateSiteTypeInput, UpdateSiteTypeInput } from "@/lib/validations/site.schema";
 import { connectDB } from "@/lib/db/connection";
+import { siteCategoryTemplateByKey } from "@/lib/onboarding/templates";
+import type { TemplatePick } from "@/lib/validations/templates.schema";
+import { ValidationError } from "@/lib/utils/errors";
 import { invalidateProperty } from "@/lib/cache";
 import { toDotPaths } from "@/lib/utils/flatten";
 
@@ -272,5 +275,32 @@ export class SiteService {
 
     await invalidateProperty(propertyId);
     return updated;
+  }
+
+  /** Creates site categories from starter templates with owner-entered default nightly rates. */
+  static async createSiteTypesFromTemplates(organizationId: string, propertyId: string, items: TemplatePick[]) {
+    await connectDB();
+    const unknown = items.filter((i) => !siteCategoryTemplateByKey.has(i.key)).map((i) => i.key);
+    if (unknown.length) throw new ValidationError(`Unknown site category template: ${unknown.join(", ")}`);
+
+    const propId = new mongoose.Types.ObjectId(propertyId);
+    const existing = new Set((await SiteType.find({ propertyId: propId }).select("name").lean()).map((t) => t.name.toLowerCase()));
+    const docs = items
+      .map((item) => ({ item, t: siteCategoryTemplateByKey.get(item.key)! }))
+      .filter(({ t }) => !existing.has(t.name.toLowerCase()))
+      .map(({ item, t }) => ({
+        organizationId: new mongoose.Types.ObjectId(organizationId),
+        propertyId: propId,
+        name: t.name,
+        description: t.description,
+        category: t.category,
+        hookups: t.hookups,
+        maxRigLength: t.maxRigLength,
+        maxOccupancy: t.maxOccupancy,
+        defaultBaseRate: item.price,
+      }));
+    const inserted = docs.length ? await SiteType.insertMany(docs) : [];
+    if (inserted.length) await invalidateProperty(propertyId);
+    return { created: inserted.length, skipped: items.length - inserted.length };
   }
 }
